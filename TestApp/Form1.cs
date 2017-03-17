@@ -30,7 +30,19 @@ namespace TestApp
         private void Form1_Load(object sender, EventArgs e)
         {
             
+               
 
+        }
+
+        private void axWindowsMediaPlayer1_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            
+
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            MessageBox.Show("Key");
         }
 
         private OxyPlot.WindowsForms.PlotView parseAndCreateGraph(string filePath, string graphType)
@@ -38,24 +50,37 @@ namespace TestApp
             //https://www.youtube.com/watch?v=VC-nlI_stx4
             //^ Temp ref
             OxyPlot.WindowsForms.PlotView pv = new OxyPlot.WindowsForms.PlotView();
-            //pv.Dock = DockStyle.Left;
 
             if (graphType.Equals("Accelerometer"))
             {
-                pv.Location = new Point(10, 300);
+                pv.Location = new Point(18, 300);
                 pv.Size = new Size(720, 200);
             }
             else if(graphType.Equals("Gyroscope"))
             {
-                pv.Location = new Point(10, 500);
+                pv.Location = new Point(18, 500);
                 pv.Size = new Size(720, 200);
             }
 
+            pv.Controller = new OxyPlot.PlotController();
+            pv.Controller.UnbindKeyDown(OxyKey.Right);
+            pv.Controller.UnbindKeyDown(OxyKey.Left);
+
+            if(graphType.Equals("Accelerometer"))
+            {
+                pv.Controller.BindKeyDown(OxyKey.D3, PlotCommands.PanLeft);
+                pv.Controller.BindKeyDown(OxyKey.D4, PlotCommands.PanRight);
+            }
+            else if(graphType.Equals("Gyroscope"))
+            {
+                pv.Controller.BindKeyDown(OxyKey.D5, PlotCommands.PanLeft);
+                pv.Controller.BindKeyDown(OxyKey.D6, PlotCommands.PanRight);
+            }
             this.Controls.Add(pv);
 
             OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = 200;
+            xAxis.Maximum = 10;
             xAxis.Minimum = 0;
 
             OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
@@ -64,30 +89,62 @@ namespace TestApp
             FunctionSeries fs = new FunctionSeries();
             PlotModel pm = new PlotModel();
 
+            double currVal = 0.00;
+
             String line;
             StreamReader file = new StreamReader(filePath);
+
+            line = file.ReadLine();
+            string[] parsedLine = line.Split(',');
+            double startValNegation = (Convert.ToDouble(parsedLine[3]));
+            double lastTime = 0;
+            fs.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[0])));
+
+            int i = 1;
+            Random rand = new Random();
             while ((line = file.ReadLine()) != null)
             {
-                string[] parsedLine = line.Split(',');
-                fs.Points.Add(new DataPoint(Convert.ToDouble(parsedLine[0]), Convert.ToDouble(parsedLine[1])));
+                parsedLine = line.Split(',');
+                if (parsedLine.Length == 4)
+                {
+                    if(Convert.ToDouble(parsedLine[3]) > lastTime)
+                    {
+                        double timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
+                        double seconds = timeStamp / 1000000000.0;
+                        lastTime = timeStamp;
+                        fs.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[0])));
+                    }
+                }
+                //fs.Points.Add(new DataPoint(i, rand.Next(0, 1s0)));
+                //Console.WriteLine("Val 1: " + seconds + " Val 2: " + parsedLine[0]);
             }
 
             pm.Series.Add(fs);
             pm.Axes.Add(xAxis);
             pm.Axes.Add(yAxis);
             pv.Model = pm;
+            //pv.Model.Han
             file.Close();
             return pv;
         }
 
-        private void loadVideo(string filePath)
+        //a
+        
+        private void keyDown(object sender, OxyKeyEventArgs e)
         {
 
         }
 
+        private void loadVideo(string filePath)
+        {
+            MessageBox.Show("Whew Video: " + filePath);
+
+            axWindowsMediaPlayer1.URL = filePath;
+        }
+
         private void Form1_Load_1(object sender, EventArgs e)
         {
-
+            axWindowsMediaPlayer1.uiMode = "none";
         }
 
         private void loadDataToolStripMenuItem_Click(object sender, EventArgs e)
@@ -111,6 +168,9 @@ namespace TestApp
                             break;
                         case "GyroscopeData.txt":
                             gyroscopePlot = parseAndCreateGraph(sensorFiles[i], "Gyroscope");
+                            break;
+                        case "Video.mp4":
+                            loadVideo(sensorFiles[i]);
                             break;
                         default:
                             //MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
