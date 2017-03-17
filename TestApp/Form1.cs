@@ -18,15 +18,74 @@ namespace TestApp
     public partial class Form1 : Form
     {
 
+        OxyPlot.WindowsForms.PlotView accelerometerPlot;
+        OxyPlot.WindowsForms.PlotView gyroscopePlot;
+
         public Form1()
         {
             InitializeComponent();
+            
         }
 
         private void Form1_Load(object sender, EventArgs e)
-        {}
+        {
+            
 
-        private void menuToolStripMenuItem_Click(object sender, EventArgs e)
+        }
+
+        private OxyPlot.WindowsForms.PlotView parseAndCreateGraph(string filePath, string graphType)
+        {
+            //https://www.youtube.com/watch?v=VC-nlI_stx4
+            //^ Temp ref
+            OxyPlot.WindowsForms.PlotView pv = new OxyPlot.WindowsForms.PlotView();
+            //pv.Dock = DockStyle.Left;
+
+            if (graphType.Equals("Accelerometer"))
+            {
+                pv.Location = new Point(10, 300);
+                pv.Size = new Size(720, 200);
+            }
+            else if(graphType.Equals("Gyroscope"))
+            {
+                pv.Location = new Point(10, 500);
+                pv.Size = new Size(720, 200);
+            }
+
+            this.Controls.Add(pv);
+
+            OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
+            xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
+            xAxis.Maximum = 200;
+            xAxis.Minimum = 0;
+
+            OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
+            yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
+
+            FunctionSeries fs = new FunctionSeries();
+            PlotModel pm = new PlotModel();
+
+            String line;
+            StreamReader file = new StreamReader(filePath);
+            while ((line = file.ReadLine()) != null)
+            {
+                string[] parsedLine = line.Split(',');
+                fs.Points.Add(new DataPoint(Convert.ToDouble(parsedLine[0]), Convert.ToDouble(parsedLine[1])));
+            }
+
+            pm.Series.Add(fs);
+            pm.Axes.Add(xAxis);
+            pm.Axes.Add(yAxis);
+            pv.Model = pm;
+            file.Close();
+            return pv;
+        }
+
+        private void loadVideo(string filePath)
+        {
+
+        }
+
+        private void Form1_Load_1(object sender, EventArgs e)
         {
 
         }
@@ -48,54 +107,20 @@ namespace TestApp
                     switch (sensorFile)
                     {
                         case "AccelerometerData.txt":
-                            parseAndCreateGraph(sensorFiles[i]);
+                            accelerometerPlot = parseAndCreateGraph(sensorFiles[i], "Accelerometer");
                             break;
                         case "GyroscopeData.txt":
+                            gyroscopePlot = parseAndCreateGraph(sensorFiles[i], "Gyroscope");
                             break;
                         default:
-                            MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
+                            //MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
                             break;
                     }
                 }
             }
         }
 
-        private void parseAndCreateGraph(string filePath)
-        {
-            //https://www.youtube.com/watch?v=VC-nlI_stx4
-            //^ Temp ref
-            OxyPlot.WindowsForms.PlotView pv = new OxyPlot.WindowsForms.PlotView();
-            pv.Dock = DockStyle.Left;
-            this.Controls.Add(pv);
-
-            OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
-            xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = 200;
-            xAxis.Minimum = 0;
-
-            OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
-            yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
-
-            FunctionSeries fs = new FunctionSeries();
-            PlotModel pm = new PlotModel();
-
-            String line;
-            StreamReader file = new StreamReader(filePath);
-            while ((line = file.ReadLine()) != null)
-            {
-                string[] parsedLine = line.Split(',');
-                fs.Points.Add(new DataPoint(Convert.ToDouble(parsedLine[0]), Convert.ToDouble(parsedLine[1])));
-            }
-          
-            pm.Series.Add(fs);
-            pm.Axes.Add(xAxis);
-            pm.Axes.Add(yAxis);
-            pv.Model = pm;
-
-            file.Close();
-        }
-
-        private void loadVideo(string filePath)
+        private void Form1_Load_2(object sender, EventArgs e)
         {
 
         }
