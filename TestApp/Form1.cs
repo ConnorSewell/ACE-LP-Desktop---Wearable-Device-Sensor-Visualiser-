@@ -21,10 +21,15 @@ namespace TestApp
         OxyPlot.WindowsForms.PlotView accelerometerPlot;
         OxyPlot.WindowsForms.PlotView gyroscopePlot;
         List<TabPage> tabs = new List<TabPage>();
+        
+
+        AxWMPLib.AxWindowsMediaPlayer mediaOne = new AxWMPLib.AxWindowsMediaPlayer();
        
         public Form1()
         {
             InitializeComponent();
+            mediaOne = new AxWMPLib.AxWindowsMediaPlayer();
+          
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -51,13 +56,13 @@ namespace TestApp
        
             if (graphType.Equals("Accelerometer"))
             {
-                pv.Location = new Point(25, 318);
+                pv.Location = new Point(25, 280);
                 pv.Size = new Size(705, 200);
             }
             else if(graphType.Equals("Gyroscope"))
             {
-                pv.Location = new Point(25, 523);
-                pv.Size = new Size(70, 200);
+                pv.Location = new Point(25, 485);
+                pv.Size = new Size(705, 200);
             }
 
             pv.Controller = new OxyPlot.PlotController();
@@ -77,24 +82,27 @@ namespace TestApp
             this.Controls.Add(pv);
 
             OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
+          
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = 1;
+            xAxis.Maximum = 5;
             xAxis.Minimum = 0;
 
             OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
             yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
+            //yAxis.AbsoluteMaximum = 10;
+            //yAxis.AbsoluteMinimum = -10;
 
             FunctionSeries xSeries = new FunctionSeries();
             FunctionSeries ySeries = new FunctionSeries();
             FunctionSeries zSeries = new FunctionSeries();
 
-            xSeries.StrokeThickness = 0.5;
+            xSeries.StrokeThickness = 0.1;
             xSeries.Color = OxyColor.FromRgb(139, 0, 0);
            
-            ySeries.StrokeThickness = 0.5;
-            ySeries.Color = OxyColor.FromRgb(0, 100, 0);
+            ySeries.StrokeThickness = 0.1;
+            ySeries.Color = OxyColor.FromRgb(50, 100, 0);
           
-            zSeries.StrokeThickness = 0.5;
+            zSeries.StrokeThickness = 0.1;
             zSeries.Color = OxyColor.FromRgb(25, 25, 112);
     
 
@@ -102,10 +110,13 @@ namespace TestApp
             pm.TextColor = OxyColor.FromRgb(0, 0, 0);
 
             pv.BackColor = Color.White;
-            
+
+            double maxY = 0;
+            double minY = 0;
+
             string line;
             StreamReader file = new StreamReader(filePath);
-
+            line = file.ReadLine();
             line = file.ReadLine();
             string[] parsedLine = line.Split(',');
             double startValNegation = (Convert.ToDouble(parsedLine[3]));
@@ -114,8 +125,6 @@ namespace TestApp
             ySeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[1])));
             zSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[2])));
 
-            int i = 1;
-            Random rand = new Random();
             while ((line = file.ReadLine()) != null)
             {
                 parsedLine = line.Split(',');
@@ -129,6 +138,7 @@ namespace TestApp
                         xSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[0])));
                         ySeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[1])));
                         zSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[2])));
+                        
                     }
                 }
          
@@ -138,6 +148,15 @@ namespace TestApp
             pm.Series.Add(ySeries);
             pm.Series.Add(zSeries);
 
+            //yAxis.AbsoluteMaximum = maxY;
+            //yAxis.AbsoluteMinimum = minY;
+
+            Console.WriteLine("Min: " + minY);
+            Console.WriteLine("Max: " + maxY);
+
+            System.Diagnostics.Debug.WriteLine("Min: " + minY);
+            System.Diagnostics.Debug.WriteLine("Max: " + maxY);
+
             pm.Axes.Add(xAxis);
             pm.Axes.Add(yAxis);
             pv.Model = pm;
@@ -146,23 +165,28 @@ namespace TestApp
             return pv;
         }
 
-        private void loadVideo(string filePath)
-        {  
-            axWindowsMediaPlayer1.URL = filePath;
-        }
+      
 
         private void loadDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            //TabPage tab = new TabPage();
-            //tab.Text = "24/03/2017 - 14:04:21";
-            
+            TabPage tab = new TabPage();
+
+            AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
+            mediaPlayer.Location = new Point(25, 5);
+            mediaPlayer.Size = new Size(370, 260);
+
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
             FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
             DialogResult result = openFolderDialog.ShowDialog();
+
+            string videoURL = ""; 
+
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
+                string folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
+                tab.Text = folderName;
                 for (int i = 0; i < sensorFiles.Length; i++)
                 {
                     string sensorFile = sensorFiles[i].Substring(sensorFiles[i].LastIndexOf("\\") + 1);
@@ -170,29 +194,38 @@ namespace TestApp
                     switch (sensorFile)
                     {
                         case "AccelerometerData.txt":
-                            //tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Accelerometer"));
-                            parseAndCreateGraph(sensorFiles[i], "Accelerometer");
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Accelerometer"));
                             break;
                         case "GyroscopeData.txt":
-                            //tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Gyroscope"));
-                            parseAndCreateGraph(sensorFiles[i], "Gyroscope");
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Gyroscope"));
                             break;
                         case "Video.mp4":
-                            // tab.Controls.Add(loadVideo(sensorFiles[i]));
-                            loadVideo(sensorFiles[i]);
+                            tab.Controls.Add(mediaPlayer);
+                            videoURL = sensorFiles[i];
                             break;
                         default:
-                            //MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
+                            MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
                             break;
                     }
                 }
             }
 
-            //tabs.Add(tab);
-            //tabControl1.Controls.Add(tab);
+            tabs.Add(tab);
+            tabControl1.Controls.Add(tab);
+            mediaPlayer.URL = videoURL;
         }
 
         private void Form1_Load_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabPage2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
 
         }
