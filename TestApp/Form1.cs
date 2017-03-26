@@ -56,12 +56,12 @@ namespace TestApp
        
             if (graphType.Equals("Accelerometer"))
             {
-                pv.Location = new Point(25, 280);
+                pv.Location = new Point(25, 335);
                 pv.Size = new Size(705, 200);
             }
             else if(graphType.Equals("Gyroscope"))
             {
-                pv.Location = new Point(25, 485);
+                pv.Location = new Point(25, 535);
                 pv.Size = new Size(705, 200);
             }
 
@@ -165,15 +165,20 @@ namespace TestApp
             return pv;
         }
 
-      
+
+        Label timeElapsed = new Label();
+        TrackBar trackBar = new TrackBar();
+        AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
 
         private void loadDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TabPage tab = new TabPage();
 
-            AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
-            mediaPlayer.Location = new Point(25, 5);
+            
+            mediaPlayer.Location = new Point(25, 60);
             mediaPlayer.Size = new Size(370, 260);
+           
+
 
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
@@ -210,9 +215,84 @@ namespace TestApp
                 }
             }
 
+            
+            trackBar.Location = new Point(60, 5);
+            trackBar.Size = new Size(600, 10);
+            trackBar.TickStyle = 0;
+            trackBar.TickFrequency = 0;
+            trackBar.SmallChange = 0;
+            trackBar.LargeChange = 0;
+            
+            trackBar.Maximum = 300;
+            
+            //trackBar.TickFrequency = 0;
+            //trackBar.Value = 60;
+
+            trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
+
+            tab.Controls.Add(trackBar);
+
+           
+            timeElapsed.Location = new Point(660, 8);
+            timeElapsed.Text = "00:00:00";
+            tab.Controls.Add(timeElapsed);
+
             tabs.Add(tab);
             tabControl1.Controls.Add(tab);
+            mediaPlayer.settings.autoStart = false;
+            //mediaPlayer.settings....
             mediaPlayer.URL = videoURL;
+            
+        }
+
+      
+        int hours;
+        int mins;
+
+        string convertedHours;
+        string convertedMins;
+        string convertedSecs;
+
+        double currentVal;
+
+        private void trackBar_ValueChanged(object sender, System.EventArgs e)
+        {
+            currentVal = trackBar.Value;
+
+            while(currentVal >= 3600)
+            {
+                hours++;
+                currentVal -= 3600;
+            }
+
+            while(currentVal >= 60)
+            {
+                mins++;
+                currentVal -= 60;
+            }
+
+            if(hours < 10)
+            {
+                convertedHours = "0" + hours.ToString();
+            }
+
+            if(mins < 10)
+            {
+                convertedMins = "0" + mins.ToString();
+            }
+
+            convertedSecs = currentVal.ToString();
+
+            if (currentVal < 10)
+            {
+                convertedSecs = "0" + convertedSecs;
+            }
+
+            timeElapsed.Text = convertedHours + ":" + convertedMins + ":" + convertedSecs;
+            hours = 0;
+            mins = 0;
+
+            mediaPlayer.Ctlcontrols.currentPosition = currentVal;
         }
 
         private void Form1_Load_2(object sender, EventArgs e)
