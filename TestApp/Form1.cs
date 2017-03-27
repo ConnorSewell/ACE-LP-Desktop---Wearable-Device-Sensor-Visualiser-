@@ -22,25 +22,24 @@ namespace TestApp
         
         List<OxyPlot.WindowsForms.PlotView> accelerometerPlots = new List<OxyPlot.WindowsForms.PlotView>();
         List<OxyPlot.WindowsForms.PlotView> gyroscopePlots = new List<OxyPlot.WindowsForms.PlotView>();
+        List<TrackBar> trackBars = new List<TrackBar>();
+        List<Button> buttons = new List<Button>();
         List<TabPage> tabs = new List<TabPage>();
+        List<AxWMPLib.AxWindowsMediaPlayer> mediaPlayers = new List<AxWMPLib.AxWindowsMediaPlayer>();
+        List<double> elapsedTimes = new List<double>();
+        List<Boolean> allPlaying = new List<Boolean>();
+        List<System.Timers.Timer> timers = new List<System.Timers.Timer>();
+        List<Label> timerLabels = new List<Label>();
 
-        Boolean allPlaying = false;
-
-        AxWMPLib.AxWindowsMediaPlayer mediaOne = new AxWMPLib.AxWindowsMediaPlayer();
-       
 
         public Form1()
         {
             InitializeComponent();
-            mediaOne = new AxWMPLib.AxWindowsMediaPlayer();
-            //pv = 
-            
-
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-           
+          
         }
 
         private void axWindowsMediaPlayer1_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
@@ -54,6 +53,7 @@ namespace TestApp
             MessageBox.Show("Key");
         }
 
+        double max = 0.00;
 
         private OxyPlot.WindowsForms.PlotView parseAndCreateGraph(string filePath, string graphType)
         {
@@ -80,8 +80,6 @@ namespace TestApp
             pv.Controller.UnbindKeyDown(OxyKey.Right);
             pv.Controller.UnbindKeyDown(OxyKey.Left);
 
-           
-            //this.Controls.Add(pv);
 
             xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
@@ -106,8 +104,6 @@ namespace TestApp
             zSeries.StrokeThickness = 0.1;
             zSeries.Color = OxyColor.FromRgb(25, 25, 112);
     
-
-            
             pm.TextColor = OxyColor.FromRgb(0, 0, 0);
 
             pv.BackColor = Color.White;
@@ -118,13 +114,15 @@ namespace TestApp
             string line;
             StreamReader file = new StreamReader(filePath);
             line = file.ReadLine();
-            line = file.ReadLine();
             string[] parsedLine = line.Split(',');
             double startValNegation = (Convert.ToDouble(parsedLine[3]));
             double lastTime = 0;
             xSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[0])));
             ySeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[1])));
             zSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[2])));
+
+            double firstVal = Convert.ToDouble(parsedLine[2])/ 1000000000.0;
+            double lastVal = 0;
 
             while ((line = file.ReadLine()) != null)
             {
@@ -139,18 +137,18 @@ namespace TestApp
                         xSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[0])));
                         ySeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[1])));
                         zSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[2])));
-
+                        lastVal = seconds;
                     }
                 }
-
             }
 
+          
+            if (lastVal > trackBars[trackBars.Count - 1].Maximum)
+            trackBars[trackBars.Count - 1].Maximum = (int)Math.Ceiling(lastVal);
+           
             pm.Series.Add(xSeries);
             pm.Series.Add(ySeries);
             pm.Series.Add(zSeries);
-
-            //yAxis.AbsoluteMaximum = maxY;
-            //yAxis.AbsoluteMinimum = minY;
 
             Console.WriteLine("Min: " + minY);
             Console.WriteLine("Max: " + maxY);
@@ -180,17 +178,38 @@ namespace TestApp
         }
 
 
-        Label timeElapsed = new Label();
-        TrackBar trackBar = new TrackBar();
-        AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
-        TabPage tab = new TabPage();
-        Button startAllButton = new Button();
+      
+        
+        
+        
 
         private void loadDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            mediaPlayer.Location = new Point(25, 60);
-            mediaPlayer.Size = new Size(370, 260);
-           
+
+            TabPage tab = new TabPage();
+            AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
+            Button startAllButton = new Button();
+            TrackBar trackBar = new TrackBar();
+            Label timerLabel = new Label();
+
+            trackBar.Location = new Point(68, 5);
+            trackBar.Size = new Size(645, 10);
+            trackBar.TickStyle = 0;
+            trackBar.TickFrequency = 0;
+            trackBar.SmallChange = 0;
+            trackBar.LargeChange = 0;
+
+
+
+            trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
+            tab.Controls.Add(trackBar);
+            trackBars.Add(trackBar);
+
+            mediaPlayers.Add(mediaPlayer);
+            allPlaying.Add(false);
+            elapsedTimes.Add(0.00);
+            timerLabels.Add(timerLabel);
+
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
             FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
@@ -214,6 +233,7 @@ namespace TestApp
                             //tab.Controls.
                             break;
                         case "GyroscopeData.txt":
+                            
                             tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Gyroscope"));
                             break;
                         case "Video.mp4":
@@ -232,33 +252,31 @@ namespace TestApp
             startAllButton.Text = "Start";
             startAllButton.Click += new System.EventHandler(playAllData);
             tab.Controls.Add(startAllButton);
+            buttons.Add(startAllButton);
+         
 
-            trackBar.Location = new Point(68, 5);
-            trackBar.Size = new Size(645, 10);
-            trackBar.TickStyle = 0;
-            trackBar.TickFrequency = 0;
-            trackBar.SmallChange = 0;
-            trackBar.LargeChange = 0;
-            trackBar.Maximum = 300;
-            
-            //trackBar.TickFrequency = 0;
-            //trackBar.Value = 60;
-
-            trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
-            tab.Controls.Add(trackBar);
-
-            timeElapsed.Location = new Point(715, 8);
-            timeElapsed.Text = "00:00:00";
-            tab.Controls.Add(timeElapsed);
+            timerLabel.Location = new Point(715, 8);
+            timerLabel.Text = "00:00:00";
+            tab.Controls.Add(timerLabel);
             //tabs.Add(tab);
+            
+            tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
+
             tabControl1.Controls.Add(tab);
 
             mediaPlayer.settings.autoStart = true;
             //mediaPlayer.settigs...
             mediaPlayer.URL = videoURL;
             mediaPlayer.Ctlcontrols.stop();
-            //mediaPlayer.Ctlcontrols.stop();
-           
+
+            mediaPlayer.Location = new Point(25, 60);
+            mediaPlayer.Size = new Size(370, 260);
+
+            timers.Add(new System.Timers.Timer());
+            MessageBox.Show("Added: " + tabControl1.SelectedIndex.ToString());
+            timers[timers.Count - 1].Interval = 1000;
+            timers[timers.Count - 1].Elapsed += periodicGraphUpdate;
+
         }
 
         int hours;
@@ -270,30 +288,26 @@ namespace TestApp
 
         double currentVal;
         int currentPosition;
-        System.Timers.Timer timer;
 
         private void playAllData(object sender, System.EventArgs e)
         {
-            if (allPlaying)
+            if (allPlaying.ElementAt(tabControl1.SelectedIndex))
             {
-                startAllButton.Text = "Start";
-                allPlaying = false;
-                timer.Stop();
-                timer = null;
-                mediaPlayer.Ctlcontrols.stop();
+                buttons[tabControl1.SelectedIndex].Text = "Start";
+                allPlaying[tabControl1.SelectedIndex] = false;
+                timers[tabControl1.SelectedIndex].Enabled = false;
+                MessageBox.Show("All playing: " + allPlaying[tabControl1.SelectedIndex]);
+                mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.stop();
             }
             else
             {
-                startAllButton.Text = "Stop";
-                mediaPlayer.Ctlcontrols.currentPosition = currentPosition;
-                mediaPlayer.Ctlcontrols.play();
-                allPlaying = true;
+                mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.play();
+                buttons[tabControl1.SelectedIndex].Text = "Stop";
+                mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
+                allPlaying[tabControl1.SelectedIndex] = true;
 
                 Thread threadTest = new Thread(threadWait);
                 threadTest.Start();
-
-                WMPLib.WMPPlayState lol = mediaPlayer.playState;
-                Console.WriteLine("Lol: " + lol.ToString());
                
             }
         }
@@ -305,16 +319,11 @@ namespace TestApp
             {
                 MethodInvoker methodInvoker = delegate
                 {
-                    if (mediaPlayer.playState == WMPLib.WMPPlayState.wmppsPlaying)
+                    if (mediaPlayers[tabControl1.SelectedIndex].playState == WMPLib.WMPPlayState.wmppsPlaying)
                     {
-                        //mediaPlayer.Ctlcontrols.pause();
-                        
-                        timer = new System.Timers.Timer();
-                        timer.Interval = 1000;
-                        timer.Elapsed += periodicGraphUpdate;
-                        timer.Enabled = true;
-                        mediaPlayer.Ctlcontrols.currentPosition = currentPosition;
-                        timer.AutoReset = true;
+                        timers[tabControl1.SelectedIndex].Enabled = true;
+                        mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = elapsedTimes[tabControl1.SelectedIndex];
+                        timers[tabControl1.SelectedIndex].AutoReset = true;
                         test = false;
                     }
                 };
@@ -323,15 +332,46 @@ namespace TestApp
             }
         }
 
+        private void tabControl1_SelectingTab(Object sender, TabControlCancelEventArgs e)
+        {
+                for (int i = 0; i < timers.Count; i++)
+                {
+                    if (i != tabControl1.SelectedIndex)
+                    {
+                        timers[i].Enabled = false;
+                    }
+                    else
+                    {
+                        if(!timers[i].Enabled)
+                        {
+                        timers[i].Enabled = true;
+                        }
+                    }
+                }
+        }
+
         private void periodicGraphUpdate(Object source, ElapsedEventArgs e)
         {
-            currentPosition += 1;
-          
+            Console.WriteLine(source.ToString());
+            
             //http://stackoverflow.com/questions/14890295/update-label-from-another-thread
             //^ Accessed: 27/03/2017 @ 03:30
             MethodInvoker methodInvoker = delegate
             {
-                this.trackBar.Value = currentPosition;
+                Console.WriteLine("... " + tabControl1.SelectedIndex);
+                if (allPlaying[tabControl1.SelectedIndex])
+                {
+                    elapsedTimes[tabControl1.SelectedIndex] += 1;
+                    Console.WriteLine("... " + elapsedTimes[tabControl1.SelectedIndex]);
+                    if (elapsedTimes[tabControl1.SelectedIndex] > trackBars[tabControl1.SelectedIndex].Maximum)
+                    {
+                        elapsedTimes[tabControl1.SelectedIndex] = trackBars[tabControl1.SelectedIndex].Maximum;
+                    }
+                    else
+                    {
+                        trackBars[tabControl1.SelectedIndex].Value = Convert.ToInt16(elapsedTimes[tabControl1.SelectedIndex]);
+                    }
+                }
             };
 
             this.Invoke(methodInvoker);
@@ -340,41 +380,46 @@ namespace TestApp
         int currentTimerVal;
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
-            currentPosition = trackBar.Value;
-            currentVal = trackBar.Value;
+            currentPosition = trackBars[tabControl1.SelectedIndex].Value;
+            currentVal = trackBars[tabControl1.SelectedIndex].Value;
+
+            //elapsedTimes[tabControl1.SelectedIndex] = trackBars[tabControl1.SelectedIndex].Value;
             
 
-            if (allPlaying)
+            if (allPlaying[tabControl1.SelectedIndex])
             {
-                if (mediaPlayer.Ctlcontrols.currentPosition > currentPosition + 0.02)
+                if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition > currentPosition + 0.05)
                 {
-                    mediaPlayer.Ctlcontrols.pause();
-                    Thread syncer = new Thread(syncSleeper);
-                    syncer.Start();
+                    mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
+                    //Thread syncer = new Thread(syncSleeper);
+                    //syncer.Start();
                     //mediaPlayer.Ctlcontrols.currentPosition = currentPosition;
-                    Console.WriteLine("Media player ahead by at least 0.02");
+                    Console.WriteLine("Media player ahead by at least 0.01");
                 }
-                else if (mediaPlayer.Ctlcontrols.currentPosition < currentPosition - 0.02)
+                else if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition < currentPosition - 0.05)
                 {
-                    currentVal = mediaPlayer.Ctlcontrols.currentPosition;
-                    Console.WriteLine("Media player behind by at least 0.02");
+                    if (mediaPlayers[tabControl1.SelectedIndex].playState == WMPLib.WMPPlayState.wmppsPlaying)
+                    {
+                        currentVal = mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition;
+                        mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
+                        Console.WriteLine("Media player behind by at least 0.01");
+                    }
                 }
             }
 
+            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal;
+            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
 
-            gyroscopePlots[0].Model.Axes.ElementAt(0).Maximum = currentVal;
-            gyroscopePlots[0].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
+            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal;
+            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
 
-            accelerometerPlots[0].Model.Axes.ElementAt(0).Maximum = currentVal;
-            accelerometerPlots[0].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
+            Console.WriteLine(accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum);
 
-            Console.WriteLine(accelerometerPlots[0].Model.Axes.ElementAt(0).Maximum);
+            gyroscopePlots[tabControl1.SelectedIndex].InvalidatePlot(true);
+            accelerometerPlots[tabControl1.SelectedIndex].InvalidatePlot(true);
 
-            gyroscopePlots[0].InvalidatePlot(true);
-            accelerometerPlots[0].InvalidatePlot(true);
-
-            if(!allPlaying)
-            mediaPlayer.Ctlcontrols.currentPosition = currentVal;
+            if(!allPlaying[tabControl1.SelectedIndex])
+                mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentVal;
 
             currentTimerVal = Convert.ToInt32(currentVal);
 
@@ -407,10 +452,11 @@ namespace TestApp
                 convertedSecs = "0" + convertedSecs;
             }
 
-            timeElapsed.Text = convertedHours + ":" + convertedMins + ":" + convertedSecs;
+            timerLabels[tabControl1.SelectedIndex].Text = convertedHours + ":" + convertedMins + ":" + convertedSecs;
             hours = 0;
             mins = 0;
-          
+
+            elapsedTimes[tabControl1.SelectedIndex] = currentPosition;
         }
 
         private void syncSleeper()
@@ -418,7 +464,7 @@ namespace TestApp
             Thread.Sleep(15);
                 MethodInvoker methodInvoker = delegate
                 {
-                    mediaPlayer.Ctlcontrols.play();
+                    mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.play();
                 };
 
                 this.Invoke(methodInvoker);
