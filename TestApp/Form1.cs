@@ -22,6 +22,7 @@ namespace TestApp
         
         List<OxyPlot.WindowsForms.PlotView> accelerometerPlots = new List<OxyPlot.WindowsForms.PlotView>();
         List<OxyPlot.WindowsForms.PlotView> gyroscopePlots = new List<OxyPlot.WindowsForms.PlotView>();
+        List<OxyPlot.WindowsForms.PlotView> audioLevelPlots = new List<OxyPlot.WindowsForms.PlotView>();
         List<TrackBar> trackBars = new List<TrackBar>();
         List<Button> buttons = new List<Button>();
         List<TabPage> tabs = new List<TabPage>();
@@ -50,7 +51,7 @@ namespace TestApp
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            MessageBox.Show("Key");
+            
         }
 
         double max = 0.00;
@@ -59,7 +60,6 @@ namespace TestApp
         {
             //https://www.youtube.com/watch?v=VC-nlI_stx4
             //^ Temp ref
-
             OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
             OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
             OxyPlot.WindowsForms.PlotView pv = new OxyPlot.WindowsForms.PlotView();
@@ -67,29 +67,31 @@ namespace TestApp
 
             if (graphType.Equals("Accelerometer"))
             {
-                pv.Location = new Point(25, 335);
-                pv.Size = new Size(705, 150);
+                pv.Location = new Point(460, 50);
+                pv.Size = new Size(829, 205);
             }
             else if(graphType.Equals("Gyroscope"))
             {
-                pv.Location = new Point(25, 500);
-                pv.Size = new Size(705, 150);
+                pv.Location = new Point(460, 260);
+                pv.Size = new Size(829, 205);
+            }
+            else if(graphType.Equals("AudioLevelData"))
+            {
+                pv.Location = new Point(460, 475);
+                pv.Size = new Size(829, 205);
             }
 
             pv.Controller = new OxyPlot.PlotController();
             pv.Controller.UnbindKeyDown(OxyKey.Right);
             pv.Controller.UnbindKeyDown(OxyKey.Left);
-
-
+        
             xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
             xAxis.Maximum = 5;
             xAxis.Minimum = 0;
-
+            
             yAxis = new OxyPlot.Axes.LinearAxis();
             yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
-            //yAxis.AbsoluteMaximum = 10;
-            //yAxis.AbsoluteMinimum = -10;
 
             FunctionSeries xSeries = new FunctionSeries();
             FunctionSeries ySeries = new FunctionSeries();
@@ -105,6 +107,7 @@ namespace TestApp
             zSeries.Color = OxyColor.FromRgb(25, 25, 112);
     
             pm.TextColor = OxyColor.FromRgb(0, 0, 0);
+            pm.Padding = new OxyThickness(0, 10, 25, 0);
 
             pv.BackColor = Color.White;
 
@@ -163,120 +166,23 @@ namespace TestApp
             if (graphType.Equals("Accelerometer"))
             {
                 accelerometerPlots.Add(pv);
-                //pv.Controller.BindKeyDown(OxyKey.D3, PlotCommands.PanLeft);
-                //pv.Controller.BindKeyDown(OxyKey.D4, PlotCommands.PanRight);
             }
             else if (graphType.Equals("Gyroscope"))
             {
                 gyroscopePlots.Add(pv);
-                //pv.Controller.BindKeyDown(OxyKey.D5, PlotCommands.PanLeft);
-                //pv.Controller.BindKeyDown(OxyKey.D6, PlotCommands.PanRight);
+            }
+            else if(graphType.Equals("AudioLevels"))
+            {
+                audioLevelPlots.Add(pv);
             }
 
             file.Close();
             return pv;
         }
 
-
-      
-        
-        
-        
-
         private void loadDataToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
-            TabPage tab = new TabPage();
-            AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
-            Button startAllButton = new Button();
-            TrackBar trackBar = new TrackBar();
-            Label timerLabel = new Label();
-
-            trackBar.Location = new Point(68, 5);
-            trackBar.Size = new Size(645, 10);
-            trackBar.TickStyle = 0;
-            trackBar.TickFrequency = 0;
-            trackBar.SmallChange = 0;
-            trackBar.LargeChange = 0;
-
-
-
-            trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
-            tab.Controls.Add(trackBar);
-            trackBars.Add(trackBar);
-
-            mediaPlayers.Add(mediaPlayer);
-            allPlaying.Add(false);
-            elapsedTimes.Add(0.00);
-            timerLabels.Add(timerLabel);
-
-            //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
-            //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
-            FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
-            DialogResult result = openFolderDialog.ShowDialog();
-
-            string videoURL = ""; 
-
-            if (result == System.Windows.Forms.DialogResult.OK)
-            {
-                string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
-                string folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
-                tab.Text = folderName;
-                for (int i = 0; i < sensorFiles.Length; i++)
-                {
-                    string sensorFile = sensorFiles[i].Substring(sensorFiles[i].LastIndexOf("\\") + 1);
-
-                    switch (sensorFile)
-                    {
-                        case "AccelerometerData.txt":
-                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Accelerometer"));               
-                            //tab.Controls.
-                            break;
-                        case "GyroscopeData.txt":
-                            
-                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Gyroscope"));
-                            break;
-                        case "Video.mp4":
-                            tab.Controls.Add(mediaPlayer);
-                            videoURL = sensorFiles[i];
-                            break;
-                        default:
-                            MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
-                            break;
-                    }
-                }
-            }
-
-            startAllButton.Location = new Point(15, 6);
-            startAllButton.Size = new Size(50, 20);
-            startAllButton.Text = "Start";
-            startAllButton.Click += new System.EventHandler(playAllData);
-            tab.Controls.Add(startAllButton);
-            buttons.Add(startAllButton);
-         
-
-            timerLabel.Location = new Point(715, 8);
-            timerLabel.Text = "00:00:00";
-            tab.Controls.Add(timerLabel);
-            //tabs.Add(tab);
             
-            tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
-
-            tabControl1.Controls.Add(tab);
-
-            mediaPlayer.settings.autoStart = true;
-            //mediaPlayer.settigs...
-            mediaPlayer.URL = videoURL;
-            mediaPlayer.Ctlcontrols.stop();
-
-            mediaPlayer.Location = new Point(25, 60);
-            mediaPlayer.Size = new Size(370, 260);
-
-            timers.Add(new System.Timers.Timer());
-            MessageBox.Show("Added: " + tabControl1.SelectedIndex.ToString());
-            timers[timers.Count - 1].Interval = 1000;
-            timers[timers.Count - 1].Elapsed += periodicGraphUpdate;
-
         }
 
         int hours;
@@ -296,7 +202,7 @@ namespace TestApp
                 buttons[tabControl1.SelectedIndex].Text = "Start";
                 allPlaying[tabControl1.SelectedIndex] = false;
                 timers[tabControl1.SelectedIndex].Enabled = false;
-                MessageBox.Show("All playing: " + allPlaying[tabControl1.SelectedIndex]);
+               
                 mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.stop();
             }
             else
@@ -383,17 +289,20 @@ namespace TestApp
             currentPosition = trackBars[tabControl1.SelectedIndex].Value;
             currentVal = trackBars[tabControl1.SelectedIndex].Value;
 
-            //elapsedTimes[tabControl1.SelectedIndex] = trackBars[tabControl1.SelectedIndex].Value;
-            
-
             if (allPlaying[tabControl1.SelectedIndex])
             {
+
+                if (currentPosition <= mediaPlayers[tabControl1.SelectedIndex].currentMedia.duration)
+                {
+                    if (mediaPlayers[tabControl1.SelectedIndex].playState != WMPLib.WMPPlayState.wmppsPlaying)
+                    {
+                        mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.play();
+                    }
+                }
+
                 if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition > currentPosition + 0.05)
                 {
                     mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
-                    //Thread syncer = new Thread(syncSleeper);
-                    //syncer.Start();
-                    //mediaPlayer.Ctlcontrols.currentPosition = currentPosition;
                     Console.WriteLine("Media player ahead by at least 0.01");
                 }
                 else if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition < currentPosition - 0.05)
@@ -483,6 +392,108 @@ namespace TestApp
 
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
+
+        }
+
+        private void menuToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TabPage tab = new TabPage();
+            AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
+            Button startAllButton = new Button();
+            TrackBar trackBar = new TrackBar();
+            Label timerLabel = new Label();
+
+            trackBar.Location = new Point(68, 5);
+            trackBar.Size = new Size(1162, 10);
+            trackBar.TickStyle = 0;
+            trackBar.TickFrequency = 0;
+            trackBar.SmallChange = 0;
+            trackBar.LargeChange = 0;
+            trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
+            tab.Controls.Add(trackBar);
+            trackBars.Add(trackBar);
+
+            mediaPlayers.Add(mediaPlayer);
+            allPlaying.Add(false);
+            elapsedTimes.Add(0.00);
+            timerLabels.Add(timerLabel);
+
+            timerLabel.Location = new Point(1228, 8);
+            timerLabel.Text = "00:00:00";
+            tab.Controls.Add(timerLabel);
+
+            //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
+            //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
+            FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
+            DialogResult result = openFolderDialog.ShowDialog();
+
+            string videoURL = "";
+
+            if (result == System.Windows.Forms.DialogResult.OK)
+            {
+                string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
+                string folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
+                tab.Text = folderName;
+                for (int i = 0; i < sensorFiles.Length; i++)
+                {
+                    string sensorFile = sensorFiles[i].Substring(sensorFiles[i].LastIndexOf("\\") + 1);
+
+                    switch (sensorFile)
+                    {
+                        case "AccelerometerData.txt":
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Accelerometer"));
+                            break;
+                        case "GyroscopeData.txt":
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Gyroscope"));
+                            break;
+                        case "AudioLevelData.txt":
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "AudioLevelData"));
+                            break;
+                        case "Video.mp4":
+                            tab.Controls.Add(mediaPlayer);
+                            videoURL = sensorFiles[i];
+                            break;
+                        default:
+                            MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
+                            break;
+                    }
+                }
+            }
+
+            startAllButton.Location = new Point(15, 6);
+            startAllButton.Size = new Size(50, 20);
+            startAllButton.Text = "Start";
+            startAllButton.Click += new System.EventHandler(playAllData);
+            tab.Controls.Add(startAllButton);
+            buttons.Add(startAllButton);
+
+
+
+            //tabs.Add(tab);
+
+            tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
+
+            PictureBox pictureBox = new PictureBox();
+            pictureBox.Location = new Point(5, 385);
+            pictureBox.Size = new Size(450, 295);
+            pictureBox.BackColor = Color.Navy;
+            pictureBox.BorderStyle = BorderStyle.None;
+            tab.Controls.Add(pictureBox);
+
+            tabControl1.Controls.Add(tab);
+
+            mediaPlayer.settings.autoStart = true;
+            //mediaPlayer.settigs...
+            mediaPlayer.URL = videoURL;
+            mediaPlayer.Ctlcontrols.stop();
+
+            mediaPlayer.Location = new Point(5, 50);
+            mediaPlayer.Size = new Size(450, 330);
+
+            timers.Add(new System.Timers.Timer());
+
+            timers[timers.Count - 1].Interval = 1000;
+            timers[timers.Count - 1].Elapsed += periodicGraphUpdate;
 
         }
     }  
