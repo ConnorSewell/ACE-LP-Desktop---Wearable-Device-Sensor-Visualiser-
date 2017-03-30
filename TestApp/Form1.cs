@@ -13,13 +13,14 @@ namespace TestApp
     using OxyPlot;
     using OxyPlot.Series;
     using System.IO;
+    using System.Media;
     using System.Threading;
     using System.Timers;
 
     public partial class Form1 : Form
     {
 
-        
+     
         List<OxyPlot.WindowsForms.PlotView> accelerometerPlots = new List<OxyPlot.WindowsForms.PlotView>();
         List<OxyPlot.WindowsForms.PlotView> gyroscopePlots = new List<OxyPlot.WindowsForms.PlotView>();
         List<OxyPlot.WindowsForms.PlotView> audioLevelPlots = new List<OxyPlot.WindowsForms.PlotView>();
@@ -87,7 +88,7 @@ namespace TestApp
         
             xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = 5;
+            xAxis.Maximum = 120;
             xAxis.Minimum = 0;
             
             yAxis = new OxyPlot.Axes.LinearAxis();
@@ -124,8 +125,9 @@ namespace TestApp
             ySeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[1])));
             zSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[2])));
 
-            double firstVal = Convert.ToDouble(parsedLine[2])/ 1000000000.0;
+            double firstVal = Convert.ToDouble(parsedLine[2])/1000000000.0;
             double lastVal = 0;
+            long frames = 1;
 
             while ((line = file.ReadLine()) != null)
             {
@@ -137,9 +139,10 @@ namespace TestApp
                         double timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
                         double seconds = timeStamp / 1000000000.0;
                         lastTime = timeStamp;
-                        xSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[0])));
-                        ySeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[1])));
-                        zSeries.Points.Add(new DataPoint(seconds, Convert.ToDouble(parsedLine[2])));
+                        xSeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[0])));
+                        ySeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[1])));
+                        zSeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[2])));
+                        frames++;
                         lastVal = seconds;
                     }
                 }
@@ -158,6 +161,8 @@ namespace TestApp
 
             System.Diagnostics.Debug.WriteLine("Min: " + minY);
             System.Diagnostics.Debug.WriteLine("Max: " + maxY);
+
+           // AudioAttributes ah = new AudioAttributes.Builder();
 
             pm.Axes.Add(xAxis);
             pm.Axes.Add(yAxis);
@@ -300,27 +305,29 @@ namespace TestApp
                     }
                 }
 
-                if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition > currentPosition + 0.05)
+                if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition > currentPosition + 0.5)
                 {
-                    mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
-                    Console.WriteLine("Media player ahead by at least 0.01");
+                    //mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
+
+                    //Console.WriteLine("Media player ahead by at least 0.01");
+                    //Console.WriteLine("Current position:" + currentPosition);
                 }
-                else if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition < currentPosition - 0.05)
+                else if (mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition < currentPosition - 0.5)
                 {
                     if (mediaPlayers[tabControl1.SelectedIndex].playState == WMPLib.WMPPlayState.wmppsPlaying)
                     {
-                        currentVal = mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition;
-                        mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
-                        Console.WriteLine("Media player behind by at least 0.01");
+                        //Console.WriteLine("Current Media position:" + mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition);
+                        //currentVal = mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition;
+                        //mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
                     }
                 }
             }
 
-            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal;
-            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
+            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = (currentVal * 24);
+            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 120;
 
-            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal;
-            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = currentVal - 5;
+            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
+            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 120;
 
             Console.WriteLine(accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum);
 
@@ -429,6 +436,22 @@ namespace TestApp
 
             string videoURL = "";
 
+            var file = File.OpenRead("C:\\Users\\Connor\\Desktop\\Sample\\Audio.wav");
+
+            byte[] bytes = new byte[1024];
+
+            int processedBytes = 0;
+            int total = 0;
+            int count = 0;
+
+            while ((processedBytes = file.Read(bytes, 0, 1024)) > 0)
+            {
+                total += processedBytes;
+                count++;
+
+            }
+
+
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
@@ -452,6 +475,9 @@ namespace TestApp
                         case "Video.mp4":
                             tab.Controls.Add(mediaPlayer);
                             videoURL = sensorFiles[i];
+                            break;
+                        case "Audio.wav":
+                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Audio"));
                             break;
                         default:
                             MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
