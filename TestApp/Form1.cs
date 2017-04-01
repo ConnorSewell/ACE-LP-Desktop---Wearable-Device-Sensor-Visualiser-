@@ -90,10 +90,14 @@ namespace TestApp
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
             xAxis.Maximum = 120;
             xAxis.Minimum = 0;
+            xAxis.Unit = " Frames ";
+            xAxis.FontSize = 14;
             
             yAxis = new OxyPlot.Axes.LinearAxis();
             yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
-
+            yAxis.Unit = " m/" + "s\u00B2 ";
+            yAxis.FontSize = 14;
+            
             FunctionSeries xSeries = new FunctionSeries();
             FunctionSeries ySeries = new FunctionSeries();
             FunctionSeries zSeries = new FunctionSeries();
@@ -108,7 +112,7 @@ namespace TestApp
             zSeries.Color = OxyColor.FromRgb(25, 25, 112);
     
             pm.TextColor = OxyColor.FromRgb(0, 0, 0);
-            pm.Padding = new OxyThickness(0, 10, 25, 0);
+            pm.Padding = new OxyThickness(0, 10, 25, 30);
 
             pv.BackColor = Color.White;
 
@@ -129,6 +133,14 @@ namespace TestApp
             double lastVal = 0;
             long frames = 1;
 
+            double maxValY = 0;
+
+            double x;
+            double y;
+            double z;
+            double timeStamp;
+            double seconds;
+
             while ((line = file.ReadLine()) != null)
             {
                 parsedLine = line.Split(',');
@@ -136,14 +148,21 @@ namespace TestApp
                 {
                     if(Convert.ToDouble(parsedLine[3]) > lastTime)
                     {
-                        double timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
-                        double seconds = timeStamp / 1000000000.0;
+                        x = Convert.ToDouble(parsedLine[0]);
+                        y = Convert.ToDouble(parsedLine[1]);
+                        z = Convert.ToDouble(parsedLine[2]);
+
+                        timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
+                        seconds = timeStamp / 1000000000.0;
                         lastTime = timeStamp;
-                        xSeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[0])));
-                        ySeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[1])));
-                        zSeries.Points.Add(new DataPoint(frames, Convert.ToDouble(parsedLine[2])));
+
+                        xSeries.Points.Add(new DataPoint(frames, x));
+                        ySeries.Points.Add(new DataPoint(frames, y));
+                        zSeries.Points.Add(new DataPoint(frames, z));
+
                         frames++;
                         lastVal = seconds;
+
                     }
                 }
             }
@@ -151,25 +170,45 @@ namespace TestApp
           
             if (lastVal > trackBars[trackBars.Count - 1].Maximum)
             trackBars[trackBars.Count - 1].Maximum = (int)Math.Ceiling(lastVal);
-           
+
+            if (graphType.Equals("Accelerometer") || graphType.Equals("Gyroscope"))
+            {
+                pm.Title = graphType;
+                pm.TitleFontSize = 12;
+                pm.TitleFontWeight = 0;
+                xSeries.Title = graphType + " X (RED)";
+                ySeries.Title = graphType + " Y (GREEN)";
+                zSeries.Title = graphType + " Z (BLUE)";
+                
+
+            }
+            else if (graphType.Equals("AudioLevels"))
+            {
+                
+            }
+
+            pm.IsLegendVisible = true;
+         
+            pm.LegendPlacement = LegendPlacement.Outside;
+            pm.LegendPosition = LegendPosition.BottomLeft;
+            pm.LegendOrientation = LegendOrientation.Horizontal;
+            pm.LegendMaxHeight = 1;
+            pm.LegendMargin = 0;
+            pm.LegendSymbolLength = 16;
+            pm.LegendFontSize = 12;
+            pm.LegendPadding = 0;
+
             pm.Series.Add(xSeries);
             pm.Series.Add(ySeries);
             pm.Series.Add(zSeries);
 
-            Console.WriteLine("Min: " + minY);
-            Console.WriteLine("Max: " + maxY);
-
-            System.Diagnostics.Debug.WriteLine("Min: " + minY);
-            System.Diagnostics.Debug.WriteLine("Max: " + maxY);
-
-           // AudioAttributes ah = new AudioAttributes.Builder();
 
             pm.Axes.Add(xAxis);
             pm.Axes.Add(yAxis);
             pv.Model = pm;
 
             if (graphType.Equals("Accelerometer"))
-            {
+            { 
                 accelerometerPlots.Add(pv);
             }
             else if (graphType.Equals("Gyroscope"))
@@ -216,6 +255,7 @@ namespace TestApp
                 buttons[tabControl1.SelectedIndex].Text = "Stop";
                 mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentPosition;
                 allPlaying[tabControl1.SelectedIndex] = true;
+                //MessageBox.Show("Duration: " + mediaPlayers[tabControl1.SelectedIndex].currentMedia.durationString);
 
                 Thread threadTest = new Thread(threadWait);
                 threadTest.Start();
@@ -429,6 +469,7 @@ namespace TestApp
             timerLabel.Text = "00:00:00";
             tab.Controls.Add(timerLabel);
 
+
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
             FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
@@ -436,20 +477,6 @@ namespace TestApp
 
             string videoURL = "";
 
-            var file = File.OpenRead("C:\\Users\\Connor\\Desktop\\Sample\\Audio.wav");
-
-            byte[] bytes = new byte[1024];
-
-            int processedBytes = 0;
-            int total = 0;
-            int count = 0;
-
-            while ((processedBytes = file.Read(bytes, 0, 1024)) > 0)
-            {
-                total += processedBytes;
-                count++;
-
-            }
 
 
             if (result == System.Windows.Forms.DialogResult.OK)
@@ -477,7 +504,7 @@ namespace TestApp
                             videoURL = sensorFiles[i];
                             break;
                         case "Audio.wav":
-                            tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Audio"));
+                            //tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "Audio"));
                             break;
                         default:
                             MessageBox.Show(sensorFile + " is not a valid Sensor Data File");
@@ -493,10 +520,6 @@ namespace TestApp
             tab.Controls.Add(startAllButton);
             buttons.Add(startAllButton);
 
-
-
-            //tabs.Add(tab);
-
             tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
 
             PictureBox pictureBox = new PictureBox();
@@ -509,7 +532,9 @@ namespace TestApp
             tabControl1.Controls.Add(tab);
 
             mediaPlayer.settings.autoStart = true;
+            
             //mediaPlayer.settigs...
+            
             mediaPlayer.URL = videoURL;
             mediaPlayer.Ctlcontrols.stop();
 
