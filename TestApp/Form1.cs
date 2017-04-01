@@ -119,6 +119,7 @@ namespace TestApp
             double maxY = 0;
             double minY = 0;
             double maxValYAxis = 0;
+            double minValYAxis = 0;
 
             string line;
             StreamReader file = new StreamReader(filePath);
@@ -145,6 +146,14 @@ namespace TestApp
                 maxValYAxis = y;
             if (z > maxValYAxis)
                 maxValYAxis = z;
+
+
+            if (x < minValYAxis)
+                minValYAxis = x;
+            if (y < minValYAxis)
+                minValYAxis = y;
+            if (z < minValYAxis)
+                minValYAxis = z;
 
             double firstVal = Convert.ToDouble(parsedLine[2])/1000000000.0;
             double lastVal = 0;
@@ -173,6 +182,14 @@ namespace TestApp
                         if (z > maxValYAxis)
                             maxValYAxis = z;
 
+
+                        if (x < minValYAxis)
+                            minValYAxis = x;
+                        if (y < minValYAxis)
+                            minValYAxis = y;
+                        if (z < minValYAxis)
+                            minValYAxis = z;
+
                         timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
                         seconds = timeStamp / 1000000000.0;
                         lastTime = timeStamp;
@@ -188,14 +205,22 @@ namespace TestApp
                 }
             }
 
-            MessageBox.Show("Max: " + (int)Math.Ceiling(maxValYAxis));
+            double step = maxValYAxis;
 
-            yAxis.MajorStep = (int)Math.Ceiling(maxValYAxis);
+            if(Math.Abs(minValYAxis) > maxValYAxis)
+            {
+                step = Math.Abs(minValYAxis);
+            }
+            yAxis.MajorStep = (int)Math.Ceiling(step);
             yAxis.Maximum = (int)Math.Ceiling(maxValYAxis);
-           
-           
-            //yAxis.
-            //yAxis.Label
+            if (minValYAxis >= 0)
+            {
+                yAxis.Minimum = (int)Math.Ceiling(minValYAxis);
+            }
+            else
+            {
+                yAxis.Minimum = -((int)Math.Ceiling(Math.Abs(minValYAxis)));
+            }
 
 
             if (lastVal > trackBars[trackBars.Count - 1].Maximum)
