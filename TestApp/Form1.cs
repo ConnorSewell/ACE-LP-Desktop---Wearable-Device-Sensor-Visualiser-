@@ -118,6 +118,7 @@ namespace TestApp
 
             double maxY = 0;
             double minY = 0;
+            double maxValYAxis = 0;
 
             string line;
             StreamReader file = new StreamReader(filePath);
@@ -125,19 +126,32 @@ namespace TestApp
             string[] parsedLine = line.Split(',');
             double startValNegation = (Convert.ToDouble(parsedLine[3]));
             double lastTime = 0;
-            xSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[0])));
-            ySeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[1])));
-            zSeries.Points.Add(new DataPoint(0, Convert.ToDouble(parsedLine[2])));
+
+            double x;
+            double y;
+            double z;
+
+            x = Convert.ToDouble(parsedLine[0]);
+            y = Convert.ToDouble(parsedLine[1]);
+            z = Convert.ToDouble(parsedLine[2]);
+
+            xSeries.Points.Add(new DataPoint(0, z));
+            ySeries.Points.Add(new DataPoint(0, y));
+            zSeries.Points.Add(new DataPoint(0, z));
+
+            if (x > maxValYAxis)
+                maxValYAxis = x;
+            if (y > maxValYAxis)
+                maxValYAxis = y;
+            if (z > maxValYAxis)
+                maxValYAxis = z;
 
             double firstVal = Convert.ToDouble(parsedLine[2])/1000000000.0;
             double lastVal = 0;
             long frames = 1;
 
-            double maxValY = 0;
-
-            double x;
-            double y;
-            double z;
+            
+         
             double timeStamp;
             double seconds;
 
@@ -151,6 +165,13 @@ namespace TestApp
                         x = Convert.ToDouble(parsedLine[0]);
                         y = Convert.ToDouble(parsedLine[1]);
                         z = Convert.ToDouble(parsedLine[2]);
+
+                        if (x > maxValYAxis)
+                            maxValYAxis = x;
+                        if (y > maxValYAxis)
+                            maxValYAxis = y;
+                        if (z > maxValYAxis)
+                            maxValYAxis = z;
 
                         timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
                         seconds = timeStamp / 1000000000.0;
@@ -167,7 +188,16 @@ namespace TestApp
                 }
             }
 
-          
+            MessageBox.Show("Max: " + (int)Math.Ceiling(maxValYAxis));
+
+            yAxis.MajorStep = (int)Math.Ceiling(maxValYAxis);
+            yAxis.Maximum = (int)Math.Ceiling(maxValYAxis);
+           
+           
+            //yAxis.
+            //yAxis.Label
+
+
             if (lastVal > trackBars[trackBars.Count - 1].Maximum)
             trackBars[trackBars.Count - 1].Maximum = (int)Math.Ceiling(lastVal);
 
