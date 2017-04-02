@@ -13,6 +13,7 @@ namespace TestApp
 {
     class GUISetUpHelper
     {
+        private static double[] audioValues = new double[16000];
         public void setTrackBarProperties(TrackBar trackBar)
         {
             trackBar.Location = new Point(68, 5);
@@ -53,27 +54,27 @@ namespace TestApp
             startAllButton.Text = "Start";
         }
 
-        private OxyPlot.Axes.LinearAxis setXAxis()
+        private OxyPlot.Axes.LinearAxis setXAxis(int max)
         {
             OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = 120;
+            xAxis.Maximum = max;
             xAxis.Minimum = 0;
             xAxis.Unit = " Frames ";
-            xAxis.FontSize = 14;
+            xAxis.FontSize = 12;
             return xAxis;
         }
 
-        private OxyPlot.Axes.LinearAxis setYAxis()
+        private OxyPlot.Axes.LinearAxis setYAxis(string unit)
         {
             OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
             yAxis.Position = OxyPlot.Axes.AxisPosition.Left;
-            yAxis.Unit = " m/" + "s\u00B2 ";
+            yAxis.Unit = unit;
             yAxis.FontSize = 14;
             return yAxis;
         }
 
-        private void checkMaxValY(double x, double y, double z, ref double maxValYAxis)
+        private void checkMaxVal3Y(double x, double y, double z, ref double maxValYAxis)
         {
             if (x > maxValYAxis)
                 maxValYAxis = x;
@@ -83,7 +84,7 @@ namespace TestApp
                 maxValYAxis = z;
         }
 
-        private void checkMinValY(double x, double y, double z, ref double minValYAxis)
+        private void checkMinVal3Y(double x, double y, double z, ref double minValYAxis)
         {
             if (x < minValYAxis)
                 minValYAxis = x;
@@ -93,7 +94,7 @@ namespace TestApp
                 minValYAxis = z;
         }
 
-        private void setLegend(ref PlotModel pm)
+        private void setLegend()
         {
             pm.IsLegendVisible = true;
             pm.LegendPlacement = LegendPlacement.Outside;
@@ -106,40 +107,126 @@ namespace TestApp
             pm.LegendPadding = 0;
         }
 
+        OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
+        OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
+        PlotModel pm;
+        OxyPlot.WindowsForms.PlotView pv;
 
-        public OxyPlot.WindowsForms.PlotView parseAndCreateGraph(string filePath, string graphType, TrackBar trackBar)
+        public OxyPlot.WindowsForms.PlotView createGraph(string filePath, string graphType, TrackBar trackBar)
         {
-            //https://www.youtube.com/watch?v=VC-nlI_stx4
-            //^ Temp ref
-            OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
-            OxyPlot.Axes.LinearAxis yAxis = new OxyPlot.Axes.LinearAxis();
-            OxyPlot.WindowsForms.PlotView pv = new OxyPlot.WindowsForms.PlotView();
-            PlotModel pm = new PlotModel();
+            xAxis = new OxyPlot.Axes.LinearAxis();
+            yAxis = new OxyPlot.Axes.LinearAxis();
+            pm = new PlotModel();
+            pv = new OxyPlot.WindowsForms.PlotView();
 
-            if (graphType.Equals("Accelerometer"))
-            {
-                pv.Location = new Point(460, 50);
-                pv.Size = new Size(829, 205);
-            }
-            else if (graphType.Equals("Gyroscope"))
-            {
-                pv.Location = new Point(460, 260);
-                pv.Size = new Size(829, 205);
-            }
-            else if (graphType.Equals("AudioLevelData"))
-            {
-                pv.Location = new Point(460, 475);
-                pv.Size = new Size(829, 205);
-            }
 
             pv.Controller = new OxyPlot.PlotController();
             pv.Controller.UnbindKeyDown(OxyKey.Right);
             pv.Controller.UnbindKeyDown(OxyKey.Left);
 
-            xAxis = setXAxis();
-            yAxis = setYAxis();
+            pm.TextColor = OxyColor.FromRgb(0, 0, 0);
+            pm.Padding = new OxyThickness(0, 10, 25, 15);
+            pv.BackColor = Color.White;
+
+            //pm.Title = graphType;
+            //pm.TitleFontSize = 12;
+            //pm.TitleFontWeight = 0;
+
+            //https://www.youtube.com/watch?v=VC-nlI_stx4
+            //^ Temp ref
+            if (graphType.Equals("Accelerometer"))
+            {
+                pv.Location = new Point(460, 50);
+                pv.Size = new Size(829, 205);
+                xAxis = setXAxis(120);
+                yAxis = setYAxis(" m/" + "s\u00B2 ");
+                setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
+            }
+            else if (graphType.Equals("Gyroscope"))
+            {
+                pv.Location = new Point(460, 260);
+                pv.Size = new Size(829, 205);
+                xAxis = setXAxis(120);
+                yAxis = setYAxis(" m/" + "s\u00B2 ");
+                setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
+            }
+            else if (graphType.Equals("AudioLevel"))
+            {
+                pv.Location = new Point(460, 475);
+                pv.Size = new Size(829, 205);
+                xAxis = setXAxis(48);
+                yAxis = setYAxis(" dB ");
+                setAudioLevelsGraphData(filePath, trackBar);
+            }
 
 
+            pm.Axes.Add(xAxis);
+            pm.Axes.Add(yAxis);
+            pv.Model = pm;
+
+            return pv;
+        }
+
+        private void setAudioLevelsGraphData(string filePath, TrackBar trackBar)
+        {
+            FunctionSeries xSeries = new FunctionSeries();
+            xSeries.StrokeThickness = 0.1;
+            xSeries.Color = OxyColor.FromRgb(139, 0, 0);
+
+            double maxValYAxis = 34000, minValYAxis = -34000, lastVal = 0;
+            byte[] bytes = new byte[32000];
+            int bytesRead = 0, total = 0, count = 0;
+
+            using (Stream fileInputStream = File.OpenRead(filePath))
+            {
+                while ((bytesRead = fileInputStream.Read(bytes, 0, 32000)) > 0)
+                {
+                    for (int i = 0; i < bytesRead; i += 2)
+                    {
+                        short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
+                        Console.WriteLine(Convert.ToInt16(shortVal));
+                    }
+
+                    total += bytesRead;
+                    count++;
+                }
+            }
+               
+                if (bytesRead != 32000)
+                {
+                    for (int i = 0; i < bytesRead; i += 2)
+                    {
+                        short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
+                       // audioValues.Add((shortVal));
+                        Console.WriteLine(Convert.ToInt16(shortVal));
+                    }
+                    total += bytesRead;
+                }
+
+            double val = 0.00;
+            for (int i = 1; i < 16001; i++)
+            {
+               // string test = audioValues.ElementAt(i).ToString();
+                val = (double)(i/((double)8000/(double)24));
+                //Console.WriteLine(test);
+                //xSeries.Points.Add(new DataPoint(val, audioValues.ElementAt(i)));
+
+               // Console.WriteLine("i is: " + i);
+
+                //xSeries.Points.Add(new DataPoint((currentVal * 24) + i, rand.Next(0, 100)));
+            }
+
+
+            setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
+            setLegend();
+
+            xSeries.Title = "Audio Level Data (RED)";
+            pm.Series.Add(xSeries);
+
+        }
+
+        private void setGyroscopeOrAccelerometerGraphData(string filePath, string graphType, TrackBar trackBar)
+        {
             FunctionSeries xSeries = new FunctionSeries();
             FunctionSeries ySeries = new FunctionSeries();
             FunctionSeries zSeries = new FunctionSeries();
@@ -152,11 +239,6 @@ namespace TestApp
 
             zSeries.StrokeThickness = 0.1;
             zSeries.Color = OxyColor.FromRgb(25, 25, 112);
-
-            pm.TextColor = OxyColor.FromRgb(0, 0, 0);
-            pm.Padding = new OxyThickness(0, 10, 25, 30);
-
-            pv.BackColor = Color.White;
 
             double maxValYAxis = 0, minValYAxis = 0;
 
@@ -171,16 +253,16 @@ namespace TestApp
             double y = Convert.ToDouble(parsedLine[1]);
             double z = Convert.ToDouble(parsedLine[2]);
 
-            xSeries.Points.Add(new DataPoint(0, z));
-            ySeries.Points.Add(new DataPoint(0, y));
-            zSeries.Points.Add(new DataPoint(0, z));
+            xSeries.Points.Add(new DataPoint(1, z));
+            ySeries.Points.Add(new DataPoint(1, y));
+            zSeries.Points.Add(new DataPoint(1, z));
 
-            checkMaxValY(x, y, z, ref maxValYAxis);
-            checkMinValY(x, y, z, ref minValYAxis);
+            checkMaxVal3Y(x, y, z, ref maxValYAxis);
+            checkMinVal3Y(x, y, z, ref minValYAxis);
 
             double firstVal = Convert.ToDouble(parsedLine[2]) / 1000000000.0;
             double lastVal = 0;
-            long frames = 1;
+            long frames = 2;
             double timeStamp;
             double seconds;
 
@@ -195,8 +277,8 @@ namespace TestApp
                         y = Convert.ToDouble(parsedLine[1]);
                         z = Convert.ToDouble(parsedLine[2]);
 
-                        checkMaxValY(x, y, z, ref maxValYAxis);
-                        checkMinValY(x, y, z, ref minValYAxis);
+                        checkMaxVal3Y(x, y, z, ref maxValYAxis);
+                        checkMinVal3Y(x, y, z, ref minValYAxis);
 
                         timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
                         seconds = timeStamp / 1000000000.0;
@@ -213,55 +295,40 @@ namespace TestApp
                 }
             }
 
+            setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
+            setLegend();
+
+            xSeries.Title = graphType + " X (RED)";
+            ySeries.Title = graphType + " Y (GREEN)";
+            zSeries.Title = graphType + " Z (BLUE)";
+
+            pm.Series.Add(xSeries);
+            pm.Series.Add(ySeries);
+            pm.Series.Add(zSeries);
+
+            file.Close();
+        }
+
+        private void setValueRanges(TrackBar trackBar, double minValYAxis, double maxValYAxis, double lastVal)
+        {
+            if (lastVal > trackBar.Maximum)
+                trackBar.Maximum = (int)Math.Ceiling(lastVal);
+
             double step = maxValYAxis;
 
             if (Math.Abs(minValYAxis) > maxValYAxis)
             {
                 step = Math.Abs(minValYAxis);
             }
+
             yAxis.MajorStep = (int)Math.Ceiling(step);
             yAxis.Maximum = (int)Math.Ceiling(maxValYAxis);
-            if (minValYAxis >= 0)
-            {
-                yAxis.Minimum = (int)Math.Ceiling(minValYAxis);
-            }
-            else
-            {
-                yAxis.Minimum = -((int)Math.Ceiling(Math.Abs(minValYAxis)));
-            }
 
+            yAxis.Minimum = (int)Math.Ceiling(minValYAxis);
+            
+         
 
-            if (lastVal > trackBar.Maximum)
-                trackBar.Maximum = (int)Math.Ceiling(lastVal);
-
-            if (graphType.Equals("Accelerometer") || graphType.Equals("Gyroscope"))
-            {
-                pm.Title = graphType;
-                pm.TitleFontSize = 12;
-                pm.TitleFontWeight = 0;
-                xSeries.Title = graphType + " X (RED)";
-                ySeries.Title = graphType + " Y (GREEN)";
-                zSeries.Title = graphType + " Z (BLUE)";
-            }
-            else if (graphType.Equals("AudioLevels"))
-            {
-
-            }
-
-            setLegend(ref pm);
-
-            pm.Series.Add(xSeries);
-            pm.Series.Add(ySeries);
-            pm.Series.Add(zSeries);
-
-            pm.Axes.Add(xAxis);
-            pm.Axes.Add(yAxis);
-            pv.Model = pm;
-
-
-            file.Close();
-            return pv;
         }
-
+      
     }
 }

@@ -155,6 +155,8 @@ namespace TestApp
 
         int currentTimerVal;
 
+        int count = 0;
+
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
             currentPosition = trackBars[tabControl1.SelectedIndex].Value;
@@ -195,10 +197,38 @@ namespace TestApp
             accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
             accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 120;
 
+            audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
+            audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
+
+            FunctionSeries xSeries = (FunctionSeries)audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0];
+
+            //MessageBox.Show(xSeries.Points.Count.ToString());
+            Random rand = new Random();
+  
+
+            audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0] = xSeries;
+
             Console.WriteLine(accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum);
 
             gyroscopePlots[tabControl1.SelectedIndex].InvalidatePlot(true);
             accelerometerPlots[tabControl1.SelectedIndex].InvalidatePlot(true);
+            audioLevelPlots[tabControl1.SelectedIndex].InvalidatePlot(true);
+
+            double val = 0.00;
+           if (count >= 2)
+            {
+                Console.WriteLine("No pts: " + xSeries.Points.Count);
+                for(int k = 0; k < 8000; k++)
+                {
+                    xSeries.Points.RemoveAt(0);
+                }
+                for (int i = 1; i < 3201; i++)
+                {
+                    //val = i/(66.6666 * 2);
+                    //xSeries.Points.Add(new DataPoint(((currentVal * 24) - 24) + val, rand.Next(-100, 100)));
+                }
+
+            }
 
             if (!allPlaying[tabControl1.SelectedIndex])
                 mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentVal;
@@ -239,6 +269,7 @@ namespace TestApp
             mins = 0;
 
             elapsedTimes[tabControl1.SelectedIndex] = currentPosition;
+            count++;
         }
 
         private void syncSleeper()
@@ -284,14 +315,14 @@ namespace TestApp
             string folderName = null;
             string path = null;
 
+            PlotView pv;
+
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
                 folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
                 tab.Text = folderName;
                 path = openFolderDialog.SelectedPath;
-
-                PlotView pv;
 
                 for (int i = 0; i < sensorFiles.Length; i++)
                 {
@@ -300,26 +331,24 @@ namespace TestApp
                     switch (sensorFile)
                     {
                         case "AccelerometerData.txt":
-                            pv = guiSH.parseAndCreateGraph(sensorFiles[i], "Accelerometer", trackBars[trackBars.Count - 1]);
+                            pv = guiSH.createGraph(sensorFiles[i], "Accelerometer", trackBars[trackBars.Count - 1]);
                             accelerometerPlots.Add(pv);
                             tab.Controls.Add(pv);
                             break;
                         case "GyroscopeData.txt":
-                            pv = guiSH.parseAndCreateGraph(sensorFiles[i], "Gyroscope", trackBars[trackBars.Count - 1]);
+                            MessageBox.Show("Trackbar size: " + trackBars.Count);
+                            pv = guiSH.createGraph(sensorFiles[i], "Gyroscope", trackBars[trackBars.Count - 1]);
                             gyroscopePlots.Add(pv);
                             tab.Controls.Add(pv);
                             break;
-                        case "AudioLevelData.txt":
-                            //tab.Controls.Add(parseAndCreateGraph(sensorFiles[i], "AudioLevelData"));
-                            break;
                         case "Video.mp4":
-
                             videoPath = sensorFiles[i];
                             break;
                         case "Audio.raw":
                             audioFound = true;
-                            //tab.Controls.Add(parseAudio(sensorFiles[i]));
-                            parseAudio(sensorFiles[i]);
+                            pv = guiSH.createGraph(sensorFiles[i], "AudioLevel", trackBars[trackBars.Count - 1]);
+                            audioLevelPlots.Add(pv);
+                            tab.Controls.Add(pv);
                             break;
                         default:
                             MessageBox.Show("File not matching any sensor found... ");
@@ -332,7 +361,9 @@ namespace TestApp
             if (!audioFound)
             {
                 extractAudioFromVideo(videoPath, path);
-                parseAudio(path + "//Audio.raw");
+                pv = guiSH.createGraph(path + "//Audio.raw", "Audio Level", trackBars[trackBars.Count - 1]);
+                audioLevelPlots.Add(pv);
+                tab.Controls.Add(pv);
             }
 
             tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
@@ -343,29 +374,7 @@ namespace TestApp
             mediaPlayers.Add(mediaPlayer);
         }
 
-        private void parseAudio(string audioPath)
-        {
-            var file = File.OpenRead(audioPath);
-
-            byte[] bytes = new byte[500000];
-
-            int bytesRead = 0;
-            int total = 0;
-            int count = 0;
-
-            while ((bytesRead = file.Read(bytes, 0, 500000)) > 0)
-            {
-                total += bytesRead;
-                count++;
-
-            }
-            if (bytesRead != 500000)
-            {
-                total += bytesRead;
-            }
-
-            MessageBox.Show("Total Bytes: " + total);
-        }
+   
 
         //http://stackoverflow.com/questions/1707516/c-sharp-and-ffmpeg-preferably-without-shell-commands
         //^ Used for below method (using ffmpeg). Accessed: 02/04/2017 @ 01:31
