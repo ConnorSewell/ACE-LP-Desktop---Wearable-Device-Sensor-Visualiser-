@@ -167,6 +167,8 @@ namespace TestApp
             return pv;
         }
 
+        Stream inputStream;
+
         private void setAudioLevelsGraphData(string filePath, TrackBar trackBar)
         {
             FunctionSeries xSeries = new FunctionSeries();
@@ -177,45 +179,10 @@ namespace TestApp
             byte[] bytes = new byte[32000];
             int bytesRead = 0, total = 0, count = 0;
 
-            using (Stream fileInputStream = File.OpenRead(filePath))
-            {
-                while ((bytesRead = fileInputStream.Read(bytes, 0, 32000)) > 0)
-                {
-                    for (int i = 0; i < bytesRead; i += 2)
-                    {
-                        short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
-                        Console.WriteLine(Convert.ToInt16(shortVal));
-                    }
-
-                    total += bytesRead;
-                    count++;
-                }
-            }
-               
-                if (bytesRead != 32000)
-                {
-                    for (int i = 0; i < bytesRead; i += 2)
-                    {
-                        short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
-                       // audioValues.Add((shortVal));
-                        Console.WriteLine(Convert.ToInt16(shortVal));
-                    }
-                    total += bytesRead;
-                }
-
-            double val = 0.00;
-            for (int i = 1; i < 16001; i++)
-            {
-               // string test = audioValues.ElementAt(i).ToString();
-                val = (double)(i/((double)8000/(double)24));
-                //Console.WriteLine(test);
-                //xSeries.Points.Add(new DataPoint(val, audioValues.ElementAt(i)));
-
-               // Console.WriteLine("i is: " + i);
-
-                //xSeries.Points.Add(new DataPoint((currentVal * 24) + i, rand.Next(0, 100)));
-            }
-
+            inputStream = File.OpenRead(filePath);
+            IList<DataPoint> tester = getNewAudioData(32000, 0);
+            //IList<DataPoint> tester2 = getNewAudioData(8000);
+            xSeries.Points.AddRange(tester);
 
             setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
             setLegend();
@@ -309,6 +276,34 @@ namespace TestApp
             file.Close();
         }
 
+
+        public IList<DataPoint> getNewAudioData(int amount, int lastFrame)
+        {
+            IList<DataPoint> data = new List<DataPoint>();
+
+            byte[] bytes = new byte[amount];
+            int bytesRead = 0;
+
+            double precisionFactor = 0.003;
+            int count = 1;
+
+            if (lastFrame != 0)
+            {
+                count = ((lastFrame / 24) * 8000) + 1;
+            }
+
+            bytesRead = inputStream.Read(bytes, 0, amount);
+
+            for (int i = 0; i < bytesRead; i+=2)
+            {
+                short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
+                data.Add(new DataPoint(precisionFactor * count, Convert.ToInt16(shortVal)));
+                count++;
+            }
+
+            return data;
+        }
+
         private void setValueRanges(TrackBar trackBar, double minValYAxis, double maxValYAxis, double lastVal)
         {
             if (lastVal > trackBar.Maximum)
@@ -332,3 +327,43 @@ namespace TestApp
       
     }
 }
+
+
+//using (Stream fileInputStream = File.OpenRead(filePath))
+// {
+//     while ((bytesRead = fileInputStream.Read(bytes, 0, 32000)) > 0)
+//     {
+//         for (int i = 0; i < bytesRead; i += 2)
+//         {
+//             short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
+//             Console.WriteLine(Convert.ToInt16(shortVal));
+//         }
+
+//         total += bytesRead;
+//         count++;
+//     }
+// }
+
+//      if (bytesRead != 32000)
+//      {
+//          for (int i = 0; i < bytesRead; i += 2)
+//          {
+
+// audioValues.Add((shortVal));
+//              Console.WriteLine(Convert.ToInt16(shortVal));
+//          }
+//          total += bytesRead;
+//      }
+
+// double val = 0.00;
+// for (int i = 1; i < 16001; i++)
+// {
+// string test = audioValues.ElementAt(i).ToString();
+//     val = (double)(i/((double)8000/(double)24));
+//Console.WriteLine(test);
+//xSeries.Points.Add(new DataPoint(val, audioValues.ElementAt(i)));
+
+// Console.WriteLine("i is: " + i);
+
+//xSeries.Points.Add(new DataPoint((currentVal * 24) + i, rand.Next(0, 100)));
+//}

@@ -156,6 +156,7 @@ namespace TestApp
         int currentTimerVal;
 
         int count = 0;
+        int testCounter = 0;
 
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
@@ -200,35 +201,25 @@ namespace TestApp
             audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
             audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
 
-            FunctionSeries xSeries = (FunctionSeries)audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0];
-
-            //MessageBox.Show(xSeries.Points.Count.ToString());
-            Random rand = new Random();
-  
-
-            audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0] = xSeries;
-
-            Console.WriteLine(accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum);
-
             gyroscopePlots[tabControl1.SelectedIndex].InvalidatePlot(true);
             accelerometerPlots[tabControl1.SelectedIndex].InvalidatePlot(true);
             audioLevelPlots[tabControl1.SelectedIndex].InvalidatePlot(true);
 
-            double val = 0.00;
-           if (count >= 2)
-            {
-                Console.WriteLine("No pts: " + xSeries.Points.Count);
-                for(int k = 0; k < 8000; k++)
+           double val = 0.00;
+           if (testCounter >= 2)
+           {
+                FunctionSeries xSeries = (FunctionSeries)audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0];
+                if(xSeries.Points.Count >= 8000)
                 {
-                    xSeries.Points.RemoveAt(0);
+                    xSeries.Points.RemoveRange(0, 7999);
+                    xSeries.Points.AddRange(guiSH.getNewAudioData(16000, ((int)currentVal * 24) - 24));
+                    audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0] = xSeries;
                 }
-                for (int i = 1; i < 3201; i++)
-                {
-                    //val = i/(66.6666 * 2);
-                    //xSeries.Points.Add(new DataPoint(((currentVal * 24) - 24) + val, rand.Next(-100, 100)));
-                }
-
+           
             }
+           
+            count++;
+            testCounter++;
 
             if (!allPlaying[tabControl1.SelectedIndex])
                 mediaPlayers[tabControl1.SelectedIndex].Ctlcontrols.currentPosition = currentVal;
@@ -269,7 +260,7 @@ namespace TestApp
             mins = 0;
 
             elapsedTimes[tabControl1.SelectedIndex] = currentPosition;
-            count++;
+            
         }
 
         private void syncSleeper()
@@ -361,7 +352,7 @@ namespace TestApp
             if (!audioFound)
             {
                 extractAudioFromVideo(videoPath, path);
-                pv = guiSH.createGraph(path + "//Audio.raw", "Audio Level", trackBars[trackBars.Count - 1]);
+                pv = guiSH.createGraph(path + "//Audio.raw", "AudioLevel", trackBars[trackBars.Count - 1]);
                 audioLevelPlots.Add(pv);
                 tab.Controls.Add(pv);
             }
@@ -383,7 +374,7 @@ namespace TestApp
             MessageBox.Show(path + "\\Audio.raw");
             Process proc = new Process();
             proc.StartInfo.FileName = "ffmpeg";
-            proc.StartInfo.Arguments = "-i " + videoPath + " -f s16le -acodec pcm_s16le " + (path + "\\Audio.raw");
+            proc.StartInfo.Arguments = "-i " + videoPath + " -ar 8000 -f s16le -acodec pcm_s16le " + (path + "\\Audio.raw");
             proc.StartInfo.RedirectStandardError = true;
             proc.StartInfo.UseShellExecute = false;
             if (!proc.Start())
