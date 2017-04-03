@@ -138,7 +138,7 @@ namespace TestApp
             {
                 pv.Location = new Point(460, 50);
                 pv.Size = new Size(829, 205);
-                xAxis = setXAxis(120);
+                xAxis = setXAxis(48);
                 yAxis = setYAxis(" m/" + "s\u00B2 ");
                 setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
@@ -146,7 +146,7 @@ namespace TestApp
             {
                 pv.Location = new Point(460, 260);
                 pv.Size = new Size(829, 205);
-                xAxis = setXAxis(120);
+                xAxis = setXAxis(48);
                 yAxis = setYAxis(" m/" + "s\u00B2 ");
                 setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
@@ -155,7 +155,7 @@ namespace TestApp
                 pv.Location = new Point(460, 475);
                 pv.Size = new Size(829, 205);
                 xAxis = setXAxis(48);
-                yAxis = setYAxis(" dB ");
+                yAxis = setYAxis(" Audio Level ");
                 setAudioLevelsGraphData(filePath, trackBar);
             }
 
@@ -175,14 +175,11 @@ namespace TestApp
             xSeries.StrokeThickness = 0.1;
             xSeries.Color = OxyColor.FromRgb(139, 0, 0);
 
-            double maxValYAxis = 34000, minValYAxis = -34000, lastVal = 0;
-            byte[] bytes = new byte[32000];
-            int bytesRead = 0, total = 0, count = 0;
+            double maxValYAxis = 1, minValYAxis = -1, lastVal = 0;
+ 
 
             inputStream = File.OpenRead(filePath);
-            IList<DataPoint> tester = getNewAudioData(32000, 0);
-            //IList<DataPoint> tester2 = getNewAudioData(8000);
-            xSeries.Points.AddRange(tester);
+            xSeries.Points.AddRange(getNewAudioData(32000, 0));
 
             setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
             setLegend();
@@ -262,6 +259,8 @@ namespace TestApp
                 }
             }
 
+            MessageBox.Show("Min: " + minValYAxis + " Max: " + maxValYAxis);
+
             setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
             setLegend();
 
@@ -285,6 +284,7 @@ namespace TestApp
             int bytesRead = 0;
 
             double precisionFactor = 0.003;
+            double xPoint = 0;
             int count = 1;
 
             if (lastFrame != 0)
@@ -294,10 +294,27 @@ namespace TestApp
 
             bytesRead = inputStream.Read(bytes, 0, amount);
 
+            double amplitude = 0;
             for (int i = 0; i < bytesRead; i+=2)
             {
                 short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
-                data.Add(new DataPoint(precisionFactor * count, Convert.ToInt16(shortVal)));
+                amplitude = Convert.ToInt16(shortVal);
+                if (amplitude > 0)
+                    amplitude = amplitude / 32767;
+                else
+                    amplitude = amplitude / 32768;
+                //32767
+                if (lastFrame == 0)
+                {
+                    xPoint = (precisionFactor * count) + 1;
+                }
+                else
+                {
+                    //Console.WriteLine(xPoint);
+                    xPoint = (precisionFactor * count);
+                }
+                
+                data.Add(new DataPoint(xPoint, amplitude));
                 count++;
             }
 
@@ -319,51 +336,9 @@ namespace TestApp
             yAxis.MajorStep = (int)Math.Ceiling(step);
             yAxis.Maximum = (int)Math.Ceiling(maxValYAxis);
 
-            yAxis.Minimum = (int)Math.Ceiling(minValYAxis);
+            yAxis.Minimum = (int)Math.Floor(minValYAxis);
             
-         
-
         }
       
     }
 }
-
-
-//using (Stream fileInputStream = File.OpenRead(filePath))
-// {
-//     while ((bytesRead = fileInputStream.Read(bytes, 0, 32000)) > 0)
-//     {
-//         for (int i = 0; i < bytesRead; i += 2)
-//         {
-//             short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
-//             Console.WriteLine(Convert.ToInt16(shortVal));
-//         }
-
-//         total += bytesRead;
-//         count++;
-//     }
-// }
-
-//      if (bytesRead != 32000)
-//      {
-//          for (int i = 0; i < bytesRead; i += 2)
-//          {
-
-// audioValues.Add((shortVal));
-//              Console.WriteLine(Convert.ToInt16(shortVal));
-//          }
-//          total += bytesRead;
-//      }
-
-// double val = 0.00;
-// for (int i = 1; i < 16001; i++)
-// {
-// string test = audioValues.ElementAt(i).ToString();
-//     val = (double)(i/((double)8000/(double)24));
-//Console.WriteLine(test);
-//xSeries.Points.Add(new DataPoint(val, audioValues.ElementAt(i)));
-
-// Console.WriteLine("i is: " + i);
-
-//xSeries.Points.Add(new DataPoint((currentVal * 24) + i, rand.Next(0, 100)));
-//}

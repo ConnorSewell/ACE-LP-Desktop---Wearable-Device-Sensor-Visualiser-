@@ -193,10 +193,10 @@ namespace TestApp
             }
 
             gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = (currentVal * 24);
-            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 120;
+            gyroscopePlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
 
             accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
-            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 120;
+            accelerometerPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
 
             audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Maximum = currentVal * 24;
             audioLevelPlots[tabControl1.SelectedIndex].Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
@@ -212,7 +212,7 @@ namespace TestApp
                 if(xSeries.Points.Count >= 8000)
                 {
                     xSeries.Points.RemoveRange(0, 7999);
-                    xSeries.Points.AddRange(guiSH.getNewAudioData(16000, ((int)currentVal * 24) - 24));
+                    xSeries.Points.AddRange(guiSH.getNewAudioData(16000, ((int)currentVal * 24) - 23));
                     audioLevelPlots[tabControl1.SelectedIndex].Model.Series[0] = xSeries;
                 }
            
@@ -374,7 +374,7 @@ namespace TestApp
             MessageBox.Show(path + "\\Audio.raw");
             Process proc = new Process();
             proc.StartInfo.FileName = "ffmpeg";
-            proc.StartInfo.Arguments = "-i " + videoPath + " -ar 8000 -f s16le -acodec pcm_s16le " + (path + "\\Audio.raw");
+            proc.StartInfo.Arguments = "-i " + videoPath + " -f s16le -acodec pcm_s16le " + (path + "\\Audio.raw");
             proc.StartInfo.RedirectStandardError = true;
             proc.StartInfo.UseShellExecute = false;
             if (!proc.Start())
