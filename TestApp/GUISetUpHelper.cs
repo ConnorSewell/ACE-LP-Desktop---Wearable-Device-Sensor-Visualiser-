@@ -258,9 +258,7 @@ namespace TestApp
                     }
                 }
             }
-
-            MessageBox.Show("Min: " + minValYAxis + " Max: " + maxValYAxis);
-
+            
             setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
             setLegend();
 
