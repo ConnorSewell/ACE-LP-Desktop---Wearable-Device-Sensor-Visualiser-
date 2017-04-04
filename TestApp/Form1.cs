@@ -101,7 +101,7 @@ namespace TestApp
 
         private void tabControl1_SelectingTab(Object sender, TabControlCancelEventArgs e)
         {
-            currTab = currTab;
+            currTab = tabControl1.SelectedIndex;
             for (int i = 0; i < tabValStore.Count; i++)
             {
                 if (i != currTab)
@@ -148,7 +148,7 @@ namespace TestApp
 
         int count = 0;
         int testCounter = 0;
-
+       
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
             currentPosition = tabValStore[currTab].getTrackBar().Value;
