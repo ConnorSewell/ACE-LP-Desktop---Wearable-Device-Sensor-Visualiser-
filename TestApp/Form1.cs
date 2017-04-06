@@ -33,8 +33,10 @@ namespace TestApp
         {
            
             InitializeComponent();
-            tabControl1.MouseDoubleClick += tabControl1_MouseDoubleClick;
+            tabControl1.MouseClick += tabControl1_MouseClick;
+       
         }
+
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -42,20 +44,22 @@ namespace TestApp
 
         }
 
-        //http://stackoverflow.com/questions/25478922/how-to-trigger-event-when-clicking-on-a-selected-tab-page-header-of-a-tab-contro
-        //^ Accessed: 06/04/2017 @ 12:20 --- Used to get index of clicked tab header
-        private void tabControl1_MouseDoubleClick(object sender, MouseEventArgs e)
+        //http://stackoverflow.com/questions/15452070/create-a-new-rectangle-next-to-other-object-location
+        //^ Accessed: 06/04/2017 @ 13:04 for rectangle creation/determining if location clicked was on rectangle (close button)
+        private void tabControl1_MouseClick(object sender, MouseEventArgs e)
         {
             for (int i = 0; i < tabControl1.TabCount; i++)
             {
-                if(tabControl1.GetTabRect(i).Contains(e.Location))
+                Rectangle r = tabControl1.GetTabRect(i);
+                Rectangle closeButton = new Rectangle(r.Right - 11, r.Top + 5, 9, 8);
+                if(closeButton.Contains(e.Location))
                 {
-                    tabControl1.TabPages.Remove(tabControl1.TabPages[i]);
+                    tabControl1.TabPages.RemoveAt(i);
                     tabValStore.RemoveAt(i);
-
-                    MessageBox.Show("Tab size: " + tabValStore.Count);
                 }
+ 
             }
+         
         }
 
         private void tabControl1_DrawCloseButton(object sender, System.Windows.Forms.DrawItemEventArgs e)
@@ -325,7 +329,6 @@ namespace TestApp
             tab = new TabPage();
             mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
 
- 
             TabValueStore newTabValStore = new TabValueStore();
             tabValStore.Add(newTabValStore);
 
@@ -354,7 +357,7 @@ namespace TestApp
             {
                 string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
                 folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
-                tab.Text = folderName;
+                tab.Text = folderName + "   x";
                 path = openFolderDialog.SelectedPath;
 
                 for (int i = 0; i < sensorFiles.Length; i++)
@@ -399,6 +402,7 @@ namespace TestApp
             }
 
             tab.Controls.Add(mediaPlayer);
+
 
             tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
             tabControl1.Controls.Add(tab);
