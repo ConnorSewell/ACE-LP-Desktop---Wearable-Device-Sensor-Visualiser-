@@ -31,11 +31,36 @@ namespace TestApp
 
         public Form1()
         {
+           
             InitializeComponent();
+            tabControl1.MouseDoubleClick += tabControl1_MouseDoubleClick;
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
+           
+
+        }
+
+        //http://stackoverflow.com/questions/25478922/how-to-trigger-event-when-clicking-on-a-selected-tab-page-header-of-a-tab-contro
+        //^ Accessed: 06/04/2017 @ 12:20 --- Used to get index of clicked tab header
+        private void tabControl1_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            for (int i = 0; i < tabControl1.TabCount; i++)
+            {
+                if(tabControl1.GetTabRect(i).Contains(e.Location))
+                {
+                    tabControl1.TabPages.Remove(tabControl1.TabPages[i]);
+                    tabValStore.RemoveAt(i);
+
+                    MessageBox.Show("Tab size: " + tabValStore.Count);
+                }
+            }
+        }
+
+        private void tabControl1_DrawCloseButton(object sender, System.Windows.Forms.DrawItemEventArgs e)
+        {
+  
 
         }
 
@@ -64,7 +89,7 @@ namespace TestApp
                 tabValStore[currTab].setStartStopButtonText("Start");
                 tabValStore[currTab].setAllPlaying();
                 tabValStore[currTab].getTimer().Enabled = false;
-                tabValStore[currTab].getMediaPlayer().Ctlcontrols.stop();
+                tabValStore[currTab].getMediaPlayer().Ctlcontrols.pause();
             }
             else
             {
@@ -73,8 +98,8 @@ namespace TestApp
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentPosition;
                 tabValStore[currTab].setAllPlaying();
 
-                Thread threadTest = new Thread(threadWait);
-                threadTest.Start();
+                Thread waitMedia = new Thread(threadWait);
+                waitMedia.Start();
 
             }
         }
@@ -148,11 +173,14 @@ namespace TestApp
 
         int count = 0;
         int testCounter = 0;
+
+        int lastPosition = 0;
        
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
+            
             currentPosition = tabValStore[currTab].getTrackBar().Value;
-            currentVal = tabValStore[currTab].getTrackBar().Value;
+            //currentVal = tabValStore[currTab].getTrackBar().Value;
 
             if (tabValStore[currTab].getAllPlaying())
             {
@@ -184,14 +212,14 @@ namespace TestApp
             }
 
 
-            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Maximum = (currentVal * 24);
-            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
+            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1-0.003));
+            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
 
-            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Maximum = currentVal * 24;
-            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
+            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
+            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
 
-            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Maximum = currentVal * 24;
-            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Minimum = (currentVal * 24) - 48;
+            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
+            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
 
             tabValStore[currTab].getGyroscopePlot().InvalidatePlot(true);
             tabValStore[currTab].getAccelerometerPlot().InvalidatePlot(true);
@@ -201,11 +229,25 @@ namespace TestApp
            if (testCounter >= 2)
            {
                 FunctionSeries xSeries = (FunctionSeries)tabValStore[currTab].getAudioLevelPlot().Model.Series[0];
-                if(xSeries.Points.Count >= 8000)
+                if (currentPosition > lastPosition)
                 {
-                    xSeries.Points.RemoveRange(0, 7999);
-                    xSeries.Points.AddRange(guiSH.getNewAudioData(16000, ((int)currentVal * 24) - 23));
-                    tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                    if (xSeries.Points.Count >= 8000)
+                    {
+                        xSeries.Points.RemoveRange(0, 8000);
+                        xSeries.Points.AddRange(guiSH.getNewAudioData(16000, (currentPosition * 24) - 23));
+                        tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                    }
+                }
+                else
+                {
+                   if(xSeries.Points.Count >= 16000)
+                  {
+                        //MessageBox.Show("Size is: " + xSeries.Points.Count);
+                        xSeries.Points.RemoveRange(0, 16000);
+                        //xSeries.Points.
+                        xSeries.Points.InsertRange(0, guiSH.getNewAudioData(32000, 1));
+                        tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                    }
                 }
            
             }
@@ -216,7 +258,7 @@ namespace TestApp
             if (!tabValStore[currTab].getAllPlaying())
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentVal;
 
-            currentTimerVal = Convert.ToInt32(currentVal);
+            currentTimerVal = Convert.ToInt32(currentPosition);
 
             while (currentTimerVal >= 3600)
             {
@@ -254,7 +296,9 @@ namespace TestApp
             mins = 0;
 
             tabValStore[currTab].setElapsedTime(currentPosition);
-            
+            lastPosition = currentPosition;
+
+
         }
 
         private void syncSleeper()
@@ -281,6 +325,7 @@ namespace TestApp
             tab = new TabPage();
             mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
 
+ 
             TabValueStore newTabValStore = new TabValueStore();
             tabValStore.Add(newTabValStore);
 
@@ -434,7 +479,7 @@ namespace TestApp
 
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
-
+            
         }
     }
 }

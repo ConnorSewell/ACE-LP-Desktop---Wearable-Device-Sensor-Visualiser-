@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace TestApp
 {
     class GUISetUpHelper
@@ -58,8 +59,8 @@ namespace TestApp
         {
             OxyPlot.Axes.LinearAxis xAxis = new OxyPlot.Axes.LinearAxis();
             xAxis.Position = OxyPlot.Axes.AxisPosition.Bottom;
-            xAxis.Maximum = max;
-            xAxis.Minimum = 0;
+            xAxis.Maximum = 48.997;
+            xAxis.Minimum = 1;
             xAxis.Unit = " Frames ";
             xAxis.FontSize = 12;
             return xAxis;
@@ -128,17 +129,13 @@ namespace TestApp
             pm.Padding = new OxyThickness(0, 10, 25, 15);
             pv.BackColor = Color.White;
 
-            //pm.Title = graphType;
-            //pm.TitleFontSize = 12;
-            //pm.TitleFontWeight = 0;
-
             //https://www.youtube.com/watch?v=VC-nlI_stx4
             //^ Temp ref
             if (graphType.Equals("Accelerometer"))
             {
                 pv.Location = new Point(460, 50);
                 pv.Size = new Size(829, 205);
-                xAxis = setXAxis(48);
+                xAxis = setXAxis(49);
                 yAxis = setYAxis(" m/" + "s\u00B2 ");
                 setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
@@ -146,16 +143,16 @@ namespace TestApp
             {
                 pv.Location = new Point(460, 260);
                 pv.Size = new Size(829, 205);
-                xAxis = setXAxis(48);
-                yAxis = setYAxis(" m/" + "s\u00B2 ");
+                xAxis = setXAxis(49);
+                yAxis = setYAxis(" rad/s ");
                 setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
             else if (graphType.Equals("AudioLevel"))
             {
                 pv.Location = new Point(460, 475);
                 pv.Size = new Size(829, 205);
-                xAxis = setXAxis(48);
-                yAxis = setYAxis(" Audio Level ");
+                xAxis = setXAxis(49);
+                yAxis = setYAxis(" Audio Level % ");
                 setAudioLevelsGraphData(filePath, trackBar);
             }
 
@@ -175,11 +172,11 @@ namespace TestApp
             xSeries.StrokeThickness = 0.1;
             xSeries.Color = OxyColor.FromRgb(139, 0, 0);
 
-            double maxValYAxis = 1, minValYAxis = -1, lastVal = 0;
+            double maxValYAxis = 100, minValYAxis = -100, lastVal = 0;
  
 
             inputStream = File.OpenRead(filePath);
-            xSeries.Points.AddRange(getNewAudioData(32000, 0));
+            xSeries.Points.AddRange(getNewAudioData(32000, 1));
 
             setValueRanges(trackBar, minValYAxis, maxValYAxis, lastVal);
             setLegend();
@@ -230,31 +227,37 @@ namespace TestApp
             double timeStamp;
             double seconds;
 
+            double numberInCheck;
+
             while ((line = file.ReadLine()) != null)
             {
                 parsedLine = line.Split(',');
                 if (parsedLine.Length == 4)
                 {
-                    if (Convert.ToDouble(parsedLine[3]) > lastTime)
-                    {
-                        x = Convert.ToDouble(parsedLine[0]);
-                        y = Convert.ToDouble(parsedLine[1]);
-                        z = Convert.ToDouble(parsedLine[2]);
+                    bool numerCheck = double.TryParse(parsedLine[3], out numberInCheck);
+                    if(numerCheck)
+                    { 
+                        if (Convert.ToDouble(parsedLine[3]) > lastTime)
+                        {
+                            x = Convert.ToDouble(parsedLine[0]);
+                            y = Convert.ToDouble(parsedLine[1]);
+                            z = Convert.ToDouble(parsedLine[2]);
 
-                        checkMaxVal3Y(x, y, z, ref maxValYAxis);
-                        checkMinVal3Y(x, y, z, ref minValYAxis);
+                            checkMaxVal3Y(x, y, z, ref maxValYAxis);
+                            checkMinVal3Y(x, y, z, ref minValYAxis);
 
-                        timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
-                        seconds = timeStamp / 1000000000.0;
-                        lastTime = timeStamp;
+                            timeStamp = Convert.ToDouble(parsedLine[3]) - startValNegation;
+                            seconds = timeStamp / 1000000000.0;
+                            lastTime = timeStamp;
 
-                        xSeries.Points.Add(new DataPoint(frames, x));
-                        ySeries.Points.Add(new DataPoint(frames, y));
-                        zSeries.Points.Add(new DataPoint(frames, z));
+                            xSeries.Points.Add(new DataPoint(frames, x));
+                            ySeries.Points.Add(new DataPoint(frames, y));
+                            zSeries.Points.Add(new DataPoint(frames, z));
 
-                        frames++;
-                        lastVal = seconds;
+                            frames++;
+                            lastVal = seconds;
 
+                        }
                     }
                 }
             }
@@ -274,7 +277,7 @@ namespace TestApp
         }
 
 
-        public IList<DataPoint> getNewAudioData(int amount, int lastFrame)
+        public IList<DataPoint> getNewAudioData(int amount, int currFrame)
         {
             IList<DataPoint> data = new List<DataPoint>();
 
@@ -285,10 +288,12 @@ namespace TestApp
             double xPoint = 0;
             int count = 1;
 
-            if (lastFrame != 0)
-            {
-                count = ((lastFrame / 24) * 8000) + 1;
-            }
+            long start = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+
+            ////if (lastFrame != 0)
+            //{
+            count = ((currFrame / 24) * 8000);
+            //}
 
             bytesRead = inputStream.Read(bytes, 0, amount);
 
@@ -298,23 +303,26 @@ namespace TestApp
                 short shortVal = (short)((bytes[i]) | (bytes[i + 1]) << 8);
                 amplitude = Convert.ToInt16(shortVal);
                 if (amplitude > 0)
-                    amplitude = amplitude / 32767;
+                    amplitude = (amplitude / 32767) * 100;
                 else
-                    amplitude = amplitude / 32768;
+                    amplitude = (amplitude / 32768) * 100;
                 //32767
-                if (lastFrame == 0)
+                if (currFrame == 0)
                 {
-                    xPoint = (precisionFactor * count) + 1;
+                    xPoint = (precisionFactor * count);
                 }
                 else
                 {
                     //Console.WriteLine(xPoint);
-                    xPoint = (precisionFactor * count);
+                    xPoint = (precisionFactor * count) + 1;
                 }
                 
                 data.Add(new DataPoint(xPoint, amplitude));
                 count++;
             }
+
+            long end = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - start;
+            //MessageBox.Show("Final count val: " + xPoint);
 
             return data;
         }
