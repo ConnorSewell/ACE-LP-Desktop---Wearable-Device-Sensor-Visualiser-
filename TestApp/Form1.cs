@@ -22,25 +22,23 @@ namespace TestApp
 
     public partial class Form1 : Form
     {
- 
 
-        int tabCount = 0;
         List<TabValueStore> tabValStore = new List<TabValueStore>();
         GUISetUpHelper guiSH = new GUISetUpHelper();
         int currTab;
 
         public Form1()
         {
-           
+
             InitializeComponent();
             tabControl1.MouseClick += tabControl1_MouseClick;
-       
+
         }
 
 
         private void Form1_Load(object sender, EventArgs e)
         {
-           
+
 
         }
 
@@ -48,23 +46,32 @@ namespace TestApp
         //^ Accessed: 06/04/2017 @ 13:04 for rectangle creation/determining if location clicked was on rectangle (close button)
         private void tabControl1_MouseClick(object sender, MouseEventArgs e)
         {
-            for (int i = 0; i < tabControl1.TabCount; i++)
+            int range = 1;
+            if(currTab > 0)
             {
+                range = currTab;
+            }
+            for (int i = 0; i < range; i++)
+            {
+                MessageBox.Show("Tab: " + i);
                 Rectangle r = tabControl1.GetTabRect(i);
                 Rectangle closeButton = new Rectangle(r.Right - 11, r.Top + 5, 9, 8);
-                if(closeButton.Contains(e.Location))
+                if (closeButton.Contains(e.Location))
                 {
+                    tabValStore.ElementAt(i).getTimer().Enabled = false;
+                    tabValStore.ElementAt(i).getTimer().Dispose();
                     tabControl1.TabPages.RemoveAt(i);
+                    tabValStore.ElementAt(i).getMediaPlayer().Ctlcontrols.stop();
                     tabValStore.RemoveAt(i);
                 }
- 
+
             }
-         
+
         }
 
         private void tabControl1_DrawCloseButton(object sender, System.Windows.Forms.DrawItemEventArgs e)
         {
-  
+
 
         }
 
@@ -82,11 +89,10 @@ namespace TestApp
 
         double currentVal;
         int currentPosition;
-        
+
 
         private void playAllData(object sender, System.EventArgs e)
         {
-
             tabValStore[currTab].getTimer().Enabled = false;
             if (tabValStore[currTab].getAllPlaying())
             {
@@ -100,7 +106,6 @@ namespace TestApp
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
                 tabValStore[currTab].setStartStopButtonText("Stop");
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentPosition;
-                tabValStore[currTab].setAllPlaying();
 
                 Thread waitMedia = new Thread(threadWait);
                 waitMedia.Start();
@@ -121,6 +126,8 @@ namespace TestApp
                         tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = tabValStore[currTab].getElapsedTime();
                         tabValStore[currTab].getTimer().AutoReset = true;
                         test = false;
+                        Thread.Sleep(300);
+                        tabValStore[currTab].setAllPlaying();
                     }
                 };
 
@@ -131,34 +138,43 @@ namespace TestApp
         private void tabControl1_SelectingTab(Object sender, TabControlCancelEventArgs e)
         {
             currTab = tabControl1.SelectedIndex;
-            for (int i = 0; i < tabValStore.Count; i++)
+            if (currTab < 0 && tabValStore.Count >= 1)
+                currTab = 0;
+            try
             {
-                if (i != currTab)
+                for (int i = 0; i < tabValStore.Count; i++)
                 {
-                    tabValStore[i].getTimer().Enabled = false;
-                }
-                else
-                {
-                    if (!tabValStore[i].getTimer().Enabled)
+                    if (i != currTab)
                     {
-                        tabValStore[i].getTimer().Enabled = true;
+                        tabValStore[i].getTimer().Enabled = false;
+                    }
+                    else
+                    {
+                        if (!tabValStore[i].getTimer().Enabled)
+                        {
+                            tabValStore[i].getTimer().Enabled = true;
+                        }
                     }
                 }
+            }
+            catch(Exception)
+            {
+                Console.WriteLine("Fault Safety Measure - 0 tabs results in a tab index of -1");
             }
         }
 
         private void periodicGraphUpdate(Object source, ElapsedEventArgs e)
         {
-            Console.WriteLine(source.ToString());
+
+            //MessageBox.Show("Current Tab: " + currTab);
 
             //http://stackoverflow.com/questions/14890295/update-label-from-another-thread
             //^ Accessed: 27/03/2017 @ 03:30
             MethodInvoker methodInvoker = delegate
             {
-                Console.WriteLine("... " + currTab);
                 if (tabValStore[currTab].getAllPlaying())
                 {
-                    tabValStore[currTab].setElapsedTime(tabValStore[currTab].getElapsedTime() + 1); 
+                    tabValStore[currTab].setElapsedTime(tabValStore[currTab].getElapsedTime() + 1);
                     if (tabValStore[currTab].getElapsedTime() > tabValStore[currTab].getTrackBar().Maximum)
                     {
                         tabValStore[currTab].setElapsedTime(tabValStore[currTab].getTrackBar().Maximum);
@@ -174,90 +190,76 @@ namespace TestApp
         }
 
         int currentTimerVal;
-
-        int count = 0;
-        int testCounter = 0;
-
+        int panCount = 0;
         int lastPosition = 0;
-       
+        int offSet = 0;
+        Boolean back = false;
+
         private void trackBar_ValueChanged(object sender, System.EventArgs e)
         {
-            
+
             currentPosition = tabValStore[currTab].getTrackBar().Value;
-            //currentVal = tabValStore[currTab].getTrackBar().Value;
 
-            if (tabValStore[currTab].getAllPlaying())
+            if (currentPosition >= 2)
             {
-
-                if (currentPosition <= tabValStore[currTab].getMediaPlayer().currentMedia.duration)
+                if (currentPosition > lastPosition + 1)
                 {
-                    if (tabValStore[currTab].getMediaPlayer().playState != WMPLib.WMPPlayState.wmppsPlaying)
-                    {
-                        tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
-                    }
+                    back = false;
+                    offSet = 16000 * (currentPosition - (lastPosition + 1));
                 }
-
-                if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition > currentPosition + 0.5)
+                else if (currentPosition < lastPosition)
                 {
-                    //mediaPlayers[currTab].Ctlcontrols.currentPosition = currentPosition;
-
-                    //Console.WriteLine("Media player ahead by at least 0.01");
-                    //Console.WriteLine("Current position:" + currentPosition);
-                }
-                else if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition < currentPosition - 0.5)
-                {
-                    if (tabValStore[currTab].getMediaPlayer().playState == WMPLib.WMPPlayState.wmppsPlaying)
-                    {
-                        //Console.WriteLine("Current Media position:" + mediaPlayers[currTab].Ctlcontrols.currentPosition);
-                        //currentVal = mediaPlayers[currTab].Ctlcontrols.currentPosition;
-                        //mediaPlayers[currTab].Ctlcontrols.currentPosition = currentPosition;
-                    }
-                }
-            }
-
-
-            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1-0.003));
-            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
-
-            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
-            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
-
-            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
-            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
-
-            tabValStore[currTab].getGyroscopePlot().InvalidatePlot(true);
-            tabValStore[currTab].getAccelerometerPlot().InvalidatePlot(true);
-            tabValStore[currTab].getAudioLevelPlot().InvalidatePlot(true);
-
-           double val = 0.00;
-           if (testCounter >= 2)
-           {
-                FunctionSeries xSeries = (FunctionSeries)tabValStore[currTab].getAudioLevelPlot().Model.Series[0];
-                if (currentPosition > lastPosition)
-                {
-                    if (xSeries.Points.Count >= 8000)
-                    {
-                        xSeries.Points.RemoveRange(0, 8000);
-                        xSeries.Points.AddRange(guiSH.getNewAudioData(16000, (currentPosition * 24) - 23));
-                        tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
-                    }
+                    back = true;
+                    offSet = 16000 * (lastPosition - currentPosition) + 32000;
                 }
                 else
                 {
-                   if(xSeries.Points.Count >= 16000)
-                  {
-                        //MessageBox.Show("Size is: " + xSeries.Points.Count);
-                        xSeries.Points.RemoveRange(0, 16000);
-                        //xSeries.Points.
-                        xSeries.Points.InsertRange(0, guiSH.getNewAudioData(32000, 1));
-                        tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                    offSet = 0;
+                }
+
+
+                if (tabValStore[currTab].getAllPlaying())
+                {
+
+                    if (currentPosition <= tabValStore[currTab].getMediaPlayer().currentMedia.duration)
+                    {
+                        if (tabValStore[currTab].getMediaPlayer().playState != WMPLib.WMPPlayState.wmppsPlaying)
+                        {
+                            tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
+                        }
+                    }
+
+                    if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition > currentPosition + 0.3)
+                    {
+                        //Thread pauseMediaSyncThread = new Thread(pauseMedia);
+                        //pauseMediaSyncThread.Start();
+                        Console.WriteLine("Current Media position:" + tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition);
+                    }
+                    else if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition < currentPosition - 0.15)
+                    {
+                        if (tabValStore[currTab].getMediaPlayer().playState == WMPLib.WMPPlayState.wmppsPlaying)
+                        {
+                            Thread fastForwardSyncThread = new Thread(syncForwards);
+                            fastForwardSyncThread.Start();
+                            Console.WriteLine("Media player ahead by at least 0.01");
+                        }
                     }
                 }
-           
+
+                panCount++;
+                if (panCount >= 2)
+                {
+                    updateAccelerometerGraph();
+                    updateGyroscopeGraph();
+                    updateAudioGraph();
+                }
+
             }
-           
-            count++;
-            testCounter++;
+
+            shiftGraphs();
+        
+
+            FunctionSeries ySeries = (FunctionSeries)tabValStore[currTab].getAudioLevelPlot().Model.Series[0];
 
             if (!tabValStore[currTab].getAllPlaying())
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentVal;
@@ -280,10 +282,18 @@ namespace TestApp
             {
                 convertedHours = "0" + hours.ToString();
             }
+            else
+            {
+                convertedHours = hours.ToString();
+            }
 
             if (mins < 10)
             {
                 convertedMins = "0" + mins.ToString();
+            }
+            else
+            {
+                convertedMins = mins.ToString();
             }
 
             convertedSecs = currentTimerVal.ToString();
@@ -293,16 +303,108 @@ namespace TestApp
                 convertedSecs = "0" + convertedSecs;
             }
 
-
-
             tabValStore[currTab].getTimerLabel().Text = convertedHours + ":" + convertedMins + ":" + convertedSecs;
             hours = 0;
             mins = 0;
 
             tabValStore[currTab].setElapsedTime(currentPosition);
+
             lastPosition = currentPosition;
 
+        }
 
+        private void updateAccelerometerGraph()
+        {
+            FunctionSeries accelerometerXSeries = (FunctionSeries)tabValStore[currTab].getAccelerometerPlot().Model.Series[0];
+            FunctionSeries accelerometerYSeries = (FunctionSeries)tabValStore[currTab].getAccelerometerPlot().Model.Series[1];
+            FunctionSeries accelerometerZSeries = (FunctionSeries)tabValStore[currTab].getAccelerometerPlot().Model.Series[2];
+
+            accelerometerXSeries.Points.RemoveRange(0, accelerometerXSeries.Points.Count);
+            accelerometerYSeries.Points.RemoveRange(0, accelerometerYSeries.Points.Count);
+            accelerometerZSeries.Points.RemoveRange(0, accelerometerZSeries.Points.Count);
+
+            List<DataPoint>[] accelerometerVals = guiSH.getAccelerometerData(currentPosition - 2, 2, 0);
+            accelerometerXSeries.Points.AddRange(accelerometerVals[0]);
+            accelerometerYSeries.Points.AddRange(accelerometerVals[1]);
+            accelerometerZSeries.Points.AddRange(accelerometerVals[2]);
+
+            tabValStore[currTab].getAccelerometerPlot().Model.Series[0] = accelerometerXSeries;
+            tabValStore[currTab].getAccelerometerPlot().Model.Series[1] = accelerometerYSeries;
+            tabValStore[currTab].getAccelerometerPlot().Model.Series[2] = accelerometerZSeries;
+        }
+
+        private void updateGyroscopeGraph()
+        {
+            FunctionSeries gyroscopeXSeries = (FunctionSeries)tabValStore[currTab].getGyroscopePlot().Model.Series[0];
+            FunctionSeries gyroscopeYSeries = (FunctionSeries)tabValStore[currTab].getGyroscopePlot().Model.Series[1];
+            FunctionSeries gyroscopeZSeries = (FunctionSeries)tabValStore[currTab].getGyroscopePlot().Model.Series[2];
+
+            gyroscopeXSeries.Points.RemoveRange(0, gyroscopeXSeries.Points.Count);
+            gyroscopeYSeries.Points.RemoveRange(0, gyroscopeYSeries.Points.Count);
+            gyroscopeZSeries.Points.RemoveRange(0, gyroscopeZSeries.Points.Count);
+
+            List<DataPoint>[] gyroscopeVals = guiSH.getGyroscopeData(currentPosition - 2, 2, 0);
+            gyroscopeXSeries.Points.AddRange(gyroscopeVals[0]);
+            gyroscopeYSeries.Points.AddRange(gyroscopeVals[1]);
+            gyroscopeZSeries.Points.AddRange(gyroscopeVals[2]);
+
+            tabValStore[currTab].getGyroscopePlot().Model.Series[0] = gyroscopeXSeries;
+            tabValStore[currTab].getGyroscopePlot().Model.Series[1] = gyroscopeYSeries;
+            tabValStore[currTab].getGyroscopePlot().Model.Series[2] = gyroscopeZSeries;
+        }
+
+        private void updateAudioGraph()
+        {
+            FunctionSeries xSeries = (FunctionSeries)tabValStore[currTab].getAudioLevelPlot().Model.Series[0];
+            if (currentPosition > lastPosition)
+            {
+                if (xSeries.Points.Count == 16000)
+                {
+                    xSeries.Points.RemoveRange(0, 8000);
+                    xSeries.Points.AddRange(guiSH.getNewAudioData(offSet, (currentPosition * 24) - 23, true));
+                    tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                }
+            }
+            else if (currentPosition < lastPosition && xSeries.Points.Count >= 16000 && currentPosition >= 2)
+            {
+                if (xSeries.Points.Count >= 16000)
+                {
+                    xSeries.Points.RemoveRange(0, 16000);
+                    xSeries.Points.InsertRange(0, guiSH.getNewAudioData(offSet, (currentPosition * 24) - 47, false));
+                    tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
+                }
+            }
+
+        }
+
+        private void shiftGraphs()
+        {
+            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
+            tabValStore[currTab].getGyroscopePlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
+
+            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
+            tabValStore[currTab].getAccelerometerPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
+
+            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Maximum = ((currentPosition * 24) + (1 - 0.003));
+            tabValStore[currTab].getAudioLevelPlot().Model.Axes.ElementAt(0).Minimum = (currentPosition * 24) - 47;
+
+            tabValStore[currTab].getGyroscopePlot().InvalidatePlot(true);
+            tabValStore[currTab].getAccelerometerPlot().InvalidatePlot(true);
+            tabValStore[currTab].getAudioLevelPlot().InvalidatePlot(true);
+        }
+
+        private void syncForwards()
+        {
+            tabValStore[currTab].getMediaPlayer().settings.rate = 2;
+            Thread.Sleep(500);
+            tabValStore[currTab].getMediaPlayer().settings.rate = 1;
+        }
+
+        private void pauseMedia()
+        {
+            tabValStore[currTab].getMediaPlayer().Ctlcontrols.pause();
+            Thread.Sleep(300);
+            tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
         }
 
         private void syncSleeper()
@@ -314,14 +416,8 @@ namespace TestApp
             };
 
             this.Invoke(methodInvoker);
-
         }
 
-        private void Form1_Load_2(object sender, EventArgs e)
-        {
-
-        }
-//
         TabPage tab;
         AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
         private void menuToolStripMenuItem_Click(object sender, EventArgs e)
@@ -334,12 +430,8 @@ namespace TestApp
 
             setTrackBar();
             setTimerLabel();
-            setGPSBox();
             setStartButton();
             setTimer();
-
-            //allPlaying.Add(false);
-            //elapsedTimes.Add(0.00);
 
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
@@ -352,6 +444,10 @@ namespace TestApp
             string path = null;
 
             PlotView pv;
+
+            String accelerometerPath = null;
+            String gyroscopePath = null;
+            String audioPath = null;
 
             if (result == System.Windows.Forms.DialogResult.OK)
             {
@@ -367,23 +463,20 @@ namespace TestApp
                     switch (sensorFile)
                     {
                         case "AccelerometerData.txt":
-                            pv = guiSH.createGraph(sensorFiles[i], "Accelerometer", tabValStore[tabValStore.Count - 1].getTrackBar());
-                            tabValStore[tabValStore.Count - 1].setAccelerometerPlot(pv);
-                            tab.Controls.Add(pv);
+                            accelerometerPath = sensorFiles[i];
+                            tabValStore.ElementAt(tabValStore.Count - 1).setAccelerometerDataPath(accelerometerPath);
                             break;
                         case "GyroscopeData.txt":
-                            pv = guiSH.createGraph(sensorFiles[i], "Gyroscope", tabValStore[tabValStore.Count - 1].getTrackBar());
-                            tabValStore[tabValStore.Count - 1].setGyroscopePlot(pv);
-                            tab.Controls.Add(pv);
+                            gyroscopePath = sensorFiles[i];
+                            tabValStore.ElementAt(tabValStore.Count - 1).setGyroscopeDataPath(gyroscopePath);
                             break;
                         case "Video.mp4":
                             videoPath = sensorFiles[i];
                             break;
                         case "Audio.raw":
+                            audioPath = sensorFiles[i];
+                            tabValStore.ElementAt(tabValStore.Count - 1).setAudioDataPath(audioPath);
                             audioFound = true;
-                            pv = guiSH.createGraph(sensorFiles[i], "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
-                            tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
-                            tab.Controls.Add(pv);
                             break;
                         default:
                             MessageBox.Show("File not matching any sensor found... ");
@@ -391,6 +484,13 @@ namespace TestApp
 
                     }
                 }
+            }
+
+            if (audioFound)
+            {
+                pv = guiSH.createGraph(audioPath, "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
+                tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
+                tab.Controls.Add(pv);
             }
 
             if (!audioFound)
@@ -401,18 +501,24 @@ namespace TestApp
                 tab.Controls.Add(pv);
             }
 
-            tab.Controls.Add(mediaPlayer);
+            pv = guiSH.createGraph(accelerometerPath, "Accelerometer", tabValStore[tabValStore.Count - 1].getTrackBar());
+            tabValStore[tabValStore.Count - 1].setAccelerometerPlot(pv);
+            tab.Controls.Add(pv);
 
+            pv = guiSH.createGraph(gyroscopePath, "Gyroscope", tabValStore[tabValStore.Count - 1].getTrackBar());
+            tabValStore[tabValStore.Count - 1].setGyroscopePlot(pv);
+            tab.Controls.Add(pv);
+
+            tab.Controls.Add(mediaPlayer);
 
             tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
             tabControl1.Controls.Add(tab);
-           
+
             guiSH.setMediaPlayerProperties(videoPath, mediaPlayer);
+            mediaPlayer.Ctlcontrols.stop();
             tabValStore[tabValStore.Count - 1].setMediaPlayer(mediaPlayer);
 
         }
-
-   
 
         //http://stackoverflow.com/questions/1707516/c-sharp-and-ffmpeg-preferably-without-shell-commands
         //^ Used for below method (using ffmpeg). Accessed: 02/04/2017 @ 01:31
@@ -473,17 +579,39 @@ namespace TestApp
         }
 
         private void setTimer()
-        {  
+        {
             System.Timers.Timer timer = new System.Timers.Timer();
-            timer.Interval = 1000;
-            timer.Elapsed += periodicGraphUpdate;
             tabValStore[tabValStore.Count - 1].setTimer(timer);
+            tabValStore[tabValStore.Count - 1].getTimer().Interval = 1000;
+            tabValStore[tabValStore.Count - 1].getTimer().Elapsed += periodicGraphUpdate;
+            timer = null;
 
         }
 
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            
+
+        }
+
+        private void inalidatToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            tabValStore[currTab].getAudioLevelPlot().InvalidatePlot(true);
+        }
+
+        private void invaliToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            tabValStore[currTab].getAudioLevelPlot().InvalidatePlot(true);
+        }
+
+        private void Form1_Load_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void userGuideToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            //MessageBox.Show(Directory.GetCurrentDirectory());
+            System.Diagnostics.Process.Start(Directory.GetCurrentDirectory() + "\\User Manual.pdf");
         }
     }
 }

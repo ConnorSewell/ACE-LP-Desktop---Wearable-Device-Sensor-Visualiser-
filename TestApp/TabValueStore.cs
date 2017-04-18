@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OxyPlot;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,41 @@ namespace TestApp
         private double elapsedTime = 0.00;
         Boolean allPlaying = false;
         private AxWMPLib.AxWindowsMediaPlayer mediaPlayer;
+
+        String audioDataPath;
+        String gyroscopeDataPath;
+        String accelerometerDataPath;
+
+      
+        public void setAudioDataPath(String audioDataPath)
+        {
+            this.audioDataPath = audioDataPath;
+        }  
+
+        public String getAudioDataPath()
+        {
+            return audioDataPath;
+        }
+
+        public void setGyroscopeDataPath(String gyroscopeDataPath)
+        {
+            this.gyroscopeDataPath = gyroscopeDataPath;
+        }
+
+        public String getGyroscopeDataPath()
+        {
+            return gyroscopeDataPath;
+        }
+
+        public void setAccelerometerDataPath(String accelerometerDataPath)
+        {
+            this.accelerometerDataPath = accelerometerDataPath;
+        }
+
+        public String getAccelerometerDataPath()
+        {
+            return accelerometerDataPath;
+        }
 
         public void setElapsedTime(double elapsedTime)
         {
