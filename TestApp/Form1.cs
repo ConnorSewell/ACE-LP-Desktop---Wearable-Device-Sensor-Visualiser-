@@ -24,7 +24,9 @@ namespace TestApp
     {
 
         List<TabValueStore> tabValStore = new List<TabValueStore>();
-        GUISetUpHelper guiSH = new GUISetUpHelper();
+        //GUISetUpHelper guiSH = new GUISetUpHelper();
+        List<GUISetUpHelper> guiSH = new List<GUISetUpHelper>();
+        List<String> openFiles = new List<String>();
         int currTab;
 
         public Form1()
@@ -46,14 +48,9 @@ namespace TestApp
         //^ Accessed: 06/04/2017 @ 13:04 for rectangle creation/determining if location clicked was on rectangle (close button)
         private void tabControl1_MouseClick(object sender, MouseEventArgs e)
         {
-            int range = 1;
-            if(currTab > 0)
+        
+            for (int i = 0; i < tabControl1.TabCount; i++)
             {
-                range = currTab;
-            }
-            for (int i = 0; i < range; i++)
-            {
-                MessageBox.Show("Tab: " + i);
                 Rectangle r = tabControl1.GetTabRect(i);
                 Rectangle closeButton = new Rectangle(r.Right - 11, r.Top + 5, 9, 8);
                 if (closeButton.Contains(e.Location))
@@ -63,6 +60,9 @@ namespace TestApp
                     tabControl1.TabPages.RemoveAt(i);
                     tabValStore.ElementAt(i).getMediaPlayer().Ctlcontrols.stop();
                     tabValStore.RemoveAt(i);
+                    guiSH.ElementAt(i).closeFile();
+                    guiSH.RemoveAt(i);
+                    openFiles.RemoveAt(i);
                 }
 
             }
@@ -106,7 +106,7 @@ namespace TestApp
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
                 tabValStore[currTab].setStartStopButtonText("Stop");
                 tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentPosition;
-
+                //tabValStore[currTab].getTimer().Start();
                 Thread waitMedia = new Thread(threadWait);
                 waitMedia.Start();
 
@@ -166,7 +166,7 @@ namespace TestApp
         private void periodicGraphUpdate(Object source, ElapsedEventArgs e)
         {
 
-            //MessageBox.Show("Current Tab: " + currTab);
+   
 
             //http://stackoverflow.com/questions/14890295/update-label-from-another-thread
             //^ Accessed: 27/03/2017 @ 03:30
@@ -229,19 +229,25 @@ namespace TestApp
                         }
                     }
 
-                    if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition > currentPosition + 0.3)
+                    if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition > currentPosition + 0.25)
                     {
-                        //Thread pauseMediaSyncThread = new Thread(pauseMedia);
-                        //pauseMediaSyncThread.Start();
+                        //Thread slowDownSyncThread = new Thread(syncBackwards);
+                        //slowDownSyncThread.Start();
+                        tabValStore[currTab].getMediaPlayer().Ctlcontrols.pause();
+                        tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentPosition + 0.05;
+                        tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
                         Console.WriteLine("Current Media position:" + tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition);
                     }
-                    else if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition < currentPosition - 0.15)
+                    else if (tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition < currentPosition - 0.25)
                     {
                         if (tabValStore[currTab].getMediaPlayer().playState == WMPLib.WMPPlayState.wmppsPlaying)
                         {
-                            Thread fastForwardSyncThread = new Thread(syncForwards);
-                            fastForwardSyncThread.Start();
-                            Console.WriteLine("Media player ahead by at least 0.01");
+                            tabValStore[currTab].getMediaPlayer().Ctlcontrols.pause();
+                            tabValStore[currTab].getMediaPlayer().Ctlcontrols.currentPosition = currentPosition + 0.05;
+                            tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
+                            //Thread fastForwardSyncThread = new Thread(syncForwards);
+                            //fastForwardSyncThread.Start();
+                            //Console.WriteLine("Media player ahead by at least 0.01");
                         }
                     }
                 }
@@ -310,6 +316,7 @@ namespace TestApp
             tabValStore[currTab].setElapsedTime(currentPosition);
 
             lastPosition = currentPosition;
+       
 
         }
 
@@ -323,7 +330,7 @@ namespace TestApp
             accelerometerYSeries.Points.RemoveRange(0, accelerometerYSeries.Points.Count);
             accelerometerZSeries.Points.RemoveRange(0, accelerometerZSeries.Points.Count);
 
-            List<DataPoint>[] accelerometerVals = guiSH.getAccelerometerData(currentPosition - 2, 2, 0);
+            List<DataPoint>[] accelerometerVals = guiSH.ElementAt(currTab).getAccelerometerData(currentPosition - 2, 2, 0);
             accelerometerXSeries.Points.AddRange(accelerometerVals[0]);
             accelerometerYSeries.Points.AddRange(accelerometerVals[1]);
             accelerometerZSeries.Points.AddRange(accelerometerVals[2]);
@@ -343,7 +350,7 @@ namespace TestApp
             gyroscopeYSeries.Points.RemoveRange(0, gyroscopeYSeries.Points.Count);
             gyroscopeZSeries.Points.RemoveRange(0, gyroscopeZSeries.Points.Count);
 
-            List<DataPoint>[] gyroscopeVals = guiSH.getGyroscopeData(currentPosition - 2, 2, 0);
+            List<DataPoint>[] gyroscopeVals = guiSH.ElementAt(currTab).getGyroscopeData(currentPosition - 2, 2, 0);
             gyroscopeXSeries.Points.AddRange(gyroscopeVals[0]);
             gyroscopeYSeries.Points.AddRange(gyroscopeVals[1]);
             gyroscopeZSeries.Points.AddRange(gyroscopeVals[2]);
@@ -358,21 +365,27 @@ namespace TestApp
             FunctionSeries xSeries = (FunctionSeries)tabValStore[currTab].getAudioLevelPlot().Model.Series[0];
             if (currentPosition > lastPosition)
             {
-                if (xSeries.Points.Count == 16000)
+                if (xSeries.Points.Count == 16000 && currentPosition >= 3)
                 {
+           
                     xSeries.Points.RemoveRange(0, 8000);
-                    xSeries.Points.AddRange(guiSH.getNewAudioData(offSet, (currentPosition * 24) - 23, true));
+                    xSeries.Points.AddRange(guiSH.ElementAt(currTab).getNewAudioData(offSet, (currentPosition * 24) - 23, true));
                     tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
                 }
             }
-            else if (currentPosition < lastPosition && xSeries.Points.Count >= 16000 && currentPosition >= 2)
+            else if (currentPosition < lastPosition && currentPosition >= 2)
             {
-                if (xSeries.Points.Count >= 16000)
-                {
-                    xSeries.Points.RemoveRange(0, 16000);
-                    xSeries.Points.InsertRange(0, guiSH.getNewAudioData(offSet, (currentPosition * 24) - 47, false));
+               // if (xSeries.Points.Count >= 16000)
+              //  {
+               
+                    if(xSeries.Points.Count < 16000)
+                    {
+                      offSet = offSet - (32000 - xSeries.Points.Count * 2);
+                    }
+                    xSeries.Points.RemoveRange(0, xSeries.Points.Count);
+                    xSeries.Points.InsertRange(0, guiSH.ElementAt(currTab).getNewAudioData(offSet, (currentPosition * 24) - 47, false));
                     tabValStore[currTab].getAudioLevelPlot().Model.Series[0] = xSeries;
-                }
+              //  }
             }
 
         }
@@ -396,15 +409,15 @@ namespace TestApp
         private void syncForwards()
         {
             tabValStore[currTab].getMediaPlayer().settings.rate = 2;
-            Thread.Sleep(500);
+            Thread.Sleep(300);
             tabValStore[currTab].getMediaPlayer().settings.rate = 1;
         }
 
-        private void pauseMedia()
+        private void syncBackwards()
         {
-            tabValStore[currTab].getMediaPlayer().Ctlcontrols.pause();
+            tabValStore[currTab].getMediaPlayer().settings.rate = 0.5;
             Thread.Sleep(300);
-            tabValStore[currTab].getMediaPlayer().Ctlcontrols.play();
+            tabValStore[currTab].getMediaPlayer().settings.rate = 1;
         }
 
         private void syncSleeper()
@@ -422,17 +435,7 @@ namespace TestApp
         AxWMPLib.AxWindowsMediaPlayer mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
         private void menuToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            tab = new TabPage();
-            mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
-
-            TabValueStore newTabValStore = new TabValueStore();
-            tabValStore.Add(newTabValStore);
-
-            setTrackBar();
-            setTimerLabel();
-            setStartButton();
-            setTimer();
-
+        
             //Using http://stackoverflow.com/questions/11624298/how-to-use-openfiledialog-to-select-a-folder
             //^ For opening folder and parsing file names. Accessed: 16/03/2017 @ 20:10
             FolderBrowserDialog openFolderDialog = new FolderBrowserDialog();
@@ -444,79 +447,117 @@ namespace TestApp
             string path = null;
 
             PlotView pv;
-
             String accelerometerPath = null;
             String gyroscopePath = null;
             String audioPath = null;
 
+            Boolean folderAlreadyOpen = false;
+
             if (result == System.Windows.Forms.DialogResult.OK)
             {
                 string[] sensorFiles = Directory.GetFiles(openFolderDialog.SelectedPath);
-                folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
-                tab.Text = folderName + "   x";
-                path = openFolderDialog.SelectedPath;
-
-                for (int i = 0; i < sensorFiles.Length; i++)
+                for (int j = 0; j < openFiles.Count; j++)
                 {
-                    string sensorFile = sensorFiles[i].Substring(sensorFiles[i].LastIndexOf("\\") + 1);
-
-                    switch (sensorFile)
+                    if (openFiles.ElementAt(j).Equals(openFolderDialog.SelectedPath))
                     {
-                        case "AccelerometerData.txt":
-                            accelerometerPath = sensorFiles[i];
-                            tabValStore.ElementAt(tabValStore.Count - 1).setAccelerometerDataPath(accelerometerPath);
-                            break;
-                        case "GyroscopeData.txt":
-                            gyroscopePath = sensorFiles[i];
-                            tabValStore.ElementAt(tabValStore.Count - 1).setGyroscopeDataPath(gyroscopePath);
-                            break;
-                        case "Video.mp4":
-                            videoPath = sensorFiles[i];
-                            break;
-                        case "Audio.raw":
-                            audioPath = sensorFiles[i];
-                            tabValStore.ElementAt(tabValStore.Count - 1).setAudioDataPath(audioPath);
-                            audioFound = true;
-                            break;
-                        default:
-                            MessageBox.Show("File not matching any sensor found... ");
-                            break;
-
+                        folderAlreadyOpen = true;
                     }
                 }
+
+                if (!folderAlreadyOpen)
+                {
+                    tab = new TabPage();
+                    mediaPlayer = new AxWMPLib.AxWindowsMediaPlayer();
+                    GUISetUpHelper gusetUpHelper = new GUISetUpHelper();
+
+                    guiSH.Add(gusetUpHelper);
+                    TabValueStore newTabValStore = new TabValueStore();
+                    tabValStore.Add(newTabValStore);
+
+                    setTrackBar();
+                    setTimerLabel();
+                    setStartButton();
+                    setTimer();
+
+                    folderName = openFolderDialog.SelectedPath.Substring(openFolderDialog.SelectedPath.LastIndexOf("\\") + 1);
+                    openFiles.Add(openFolderDialog.SelectedPath);
+
+                    tab.Text = folderName + "   x";
+                    path = openFolderDialog.SelectedPath;
+
+                    for (int i = 0; i < sensorFiles.Length; i++)
+                    {
+                        string sensorFile = sensorFiles[i].Substring(sensorFiles[i].LastIndexOf("\\") + 1);
+
+                        switch (sensorFile)
+                        {
+                            case "AccelerometerData.txt":
+                                accelerometerPath = sensorFiles[i];
+                                tabValStore.ElementAt(tabValStore.Count - 1).setAccelerometerDataPath(accelerometerPath);
+                                break;
+                            case "GyroscopeData.txt":
+                                gyroscopePath = sensorFiles[i];
+                                tabValStore.ElementAt(tabValStore.Count - 1).setGyroscopeDataPath(gyroscopePath);
+                                break;
+                            case "Video.mp4":
+                                videoPath = sensorFiles[i];
+                                break;
+                            case "Audio.raw":
+                                audioPath = sensorFiles[i];
+                                tabValStore.ElementAt(tabValStore.Count - 1).setAudioDataPath(audioPath);
+                                audioFound = true;
+                                break;
+                            default:
+                                MessageBox.Show("File not matching any sensor found... ");
+                                break;
+
+                        }
+                    }
+
+                    if (audioFound)
+                    {
+                        pv = guiSH.ElementAt(guiSH.Count - 1).createGraph(audioPath, "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
+                        tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
+                        tab.Controls.Add(pv);
+                    }
+
+                    if (!audioFound)
+                    {
+                        extractAudioFromVideo(videoPath, path);
+                        pv = guiSH.ElementAt(guiSH.Count - 1).createGraph(path + "//Audio.raw", "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
+                        tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
+                        tab.Controls.Add(pv);
+                    }
+
+                    guiSH.ElementAt(guiSH.Count - 1).setAudioLevelsGraphData(audioPath, tabValStore[tabValStore.Count - 1].getTrackBar());
+
+                    pv = guiSH.ElementAt(guiSH.Count - 1).createGraph(accelerometerPath, "Accelerometer", tabValStore[tabValStore.Count - 1].getTrackBar());
+                    tabValStore[tabValStore.Count - 1].setAccelerometerPlot(pv);
+                    tab.Controls.Add(pv);
+
+                    guiSH.ElementAt(guiSH.Count - 1).setGyroscopeOrAccelerometerGraphData(accelerometerPath, "Accelerometer", tabValStore[tabValStore.Count - 1].getTrackBar());
+
+                    pv = guiSH.ElementAt(guiSH.Count - 1).createGraph(gyroscopePath, "Gyroscope", tabValStore[tabValStore.Count - 1].getTrackBar());
+                    tabValStore[tabValStore.Count - 1].setGyroscopePlot(pv);
+                    tab.Controls.Add(pv);
+
+                    guiSH.ElementAt(guiSH.Count - 1).setGyroscopeOrAccelerometerGraphData(gyroscopePath, "Gyroscope", tabValStore[tabValStore.Count - 1].getTrackBar());
+
+                    tab.Controls.Add(mediaPlayer);
+
+                    tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
+                    tabControl1.Controls.Add(tab);
+
+                    guiSH.ElementAt(guiSH.Count - 1).setMediaPlayerProperties(videoPath, mediaPlayer);
+                    mediaPlayer.Ctlcontrols.stop();
+                    tabValStore[tabValStore.Count - 1].setMediaPlayer(mediaPlayer);
+                }
+                else
+                {
+                    MessageBox.Show("This folder is already open");
+                }
             }
-
-            if (audioFound)
-            {
-                pv = guiSH.createGraph(audioPath, "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
-                tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
-                tab.Controls.Add(pv);
-            }
-
-            if (!audioFound)
-            {
-                extractAudioFromVideo(videoPath, path);
-                pv = guiSH.createGraph(path + "//Audio.raw", "AudioLevel", tabValStore[tabValStore.Count - 1].getTrackBar());
-                tabValStore[tabValStore.Count - 1].setAudioLevelPlot(pv);
-                tab.Controls.Add(pv);
-            }
-
-            pv = guiSH.createGraph(accelerometerPath, "Accelerometer", tabValStore[tabValStore.Count - 1].getTrackBar());
-            tabValStore[tabValStore.Count - 1].setAccelerometerPlot(pv);
-            tab.Controls.Add(pv);
-
-            pv = guiSH.createGraph(gyroscopePath, "Gyroscope", tabValStore[tabValStore.Count - 1].getTrackBar());
-            tabValStore[tabValStore.Count - 1].setGyroscopePlot(pv);
-            tab.Controls.Add(pv);
-
-            tab.Controls.Add(mediaPlayer);
-
-            tabControl1.Selecting += new TabControlCancelEventHandler(tabControl1_SelectingTab);
-            tabControl1.Controls.Add(tab);
-
-            guiSH.setMediaPlayerProperties(videoPath, mediaPlayer);
-            mediaPlayer.Ctlcontrols.stop();
-            tabValStore[tabValStore.Count - 1].setMediaPlayer(mediaPlayer);
+            
 
         }
 
@@ -547,7 +588,7 @@ namespace TestApp
         private void setTrackBar()
         {
             TrackBar trackBar = new TrackBar();
-            guiSH.setTrackBarProperties(trackBar);
+            guiSH.ElementAt(guiSH.Count - 1).setTrackBarProperties(trackBar);
             trackBar.ValueChanged += new System.EventHandler(trackBar_ValueChanged);
             tab.Controls.Add(trackBar);
             tabValStore[tabValStore.Count - 1].setTrackBar(trackBar);
@@ -556,7 +597,7 @@ namespace TestApp
         private void setTimerLabel()
         {
             Label label = new Label();
-            guiSH.setTimeLabelProperties(label);
+            guiSH.ElementAt(guiSH.Count - 1).setTimeLabelProperties(label);
             tab.Controls.Add(label);
             tabValStore[tabValStore.Count - 1].setTimerLabel(label);
         }
@@ -564,14 +605,14 @@ namespace TestApp
         private void setGPSBox()
         {
             PictureBox pictureBox = new PictureBox();
-            guiSH.setGPSPointProperties(pictureBox);
+            guiSH.ElementAt(guiSH.Count - 1).setGPSPointProperties(pictureBox);
             tab.Controls.Add(pictureBox);
         }
 
         private void setStartButton()
         {
             Button startAllButton = new Button();
-            guiSH.setStartButton(startAllButton);
+            guiSH.ElementAt(guiSH.Count - 1).setStartButton(startAllButton);
             startAllButton.Click += new System.EventHandler(playAllData);
             tab.Controls.Add(startAllButton);
             tabValStore[tabValStore.Count - 1].setStartStopButton(startAllButton);

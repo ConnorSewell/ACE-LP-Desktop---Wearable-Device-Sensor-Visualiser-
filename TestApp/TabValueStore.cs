@@ -25,7 +25,29 @@ namespace TestApp
         String gyroscopeDataPath;
         String accelerometerDataPath;
 
-      
+        private List<String> accelerometerData;
+        private List<String> gyroscopeData;
+
+        public void setAccelerometerData(List<String> accelerometerData)
+        {
+            this.accelerometerData = accelerometerData;
+        }
+
+        public List<String> getAccelerometerData()
+        {
+            return accelerometerData;
+        }
+
+        public void setGyroscopeData(List<String> gyroscopeData)
+        {
+            this.gyroscopeData = gyroscopeData;
+        }
+
+        public List<String> getGyroscopeData()
+        {
+            return gyroscopeData;
+        }
+
         public void setAudioDataPath(String audioDataPath)
         {
             this.audioDataPath = audioDataPath;

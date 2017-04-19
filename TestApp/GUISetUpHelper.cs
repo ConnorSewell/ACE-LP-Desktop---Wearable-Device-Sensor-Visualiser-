@@ -135,10 +135,9 @@ namespace TestApp
             {
                 pv.Location = new Point(520, 50);
                 pv.Size = new Size(900, 205);
-              
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" m/" + "s\u00B2 ");
-                setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
+                //setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
             else if (graphType.Equals("Gyroscope"))
             {
@@ -147,7 +146,7 @@ namespace TestApp
               
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" rad/s ");
-                setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
+                //setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
             else if (graphType.Equals("AudioLevel"))
             {
@@ -156,7 +155,7 @@ namespace TestApp
           
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" Audio Level % ");
-                setAudioLevelsGraphData(filePath, trackBar);
+                //setAudioLevelsGraphData(filePath, trackBar);
             }
 
 
@@ -170,7 +169,12 @@ namespace TestApp
         BinaryReader audioBinaryReader;
         double audioLength;
 
-        private void setAudioLevelsGraphData(string filePath, TrackBar trackBar)
+        public void closeFile()
+        {
+            audioBinaryReader.Close();
+        }
+
+        public void setAudioLevelsGraphData(string filePath, TrackBar trackBar)
         {
             FunctionSeries xSeries = new FunctionSeries();
             xSeries.StrokeThickness = 0.1;
@@ -202,6 +206,8 @@ namespace TestApp
             // if (offSet < 0)
             //     directionRight = false;
 
+            Boolean firstValFound = false;
+
             startTime += accelerometerStartTime;
             List<DataPoint>[] seriesData = new List<DataPoint>[3];
             seriesData[0] = new List<DataPoint>();
@@ -220,6 +226,19 @@ namespace TestApp
                 {
                     if (timestamp <= (startTime + duration))
                     {
+                        if(!firstValFound)
+                        {
+                            String[] firstVal = accelerometerData.ElementAt(i - 1).Split(',');
+                            double firstTimeStamp = ((Double.Parse(firstVal[3]) - accelerometerFirstTime) / 1000000000);
+                            if(firstTimeStamp >= accelerometerStartTime && i > 0) //i > 0 likely not required. Simply a fault prevention measure
+                            { 
+                                seriesData[0].Add(new DataPoint(1 + (firstTimeStamp - accelerometerStartTime) * 24, Double.Parse(firstVal[0])));
+                                seriesData[1].Add(new DataPoint(1 + (firstTimeStamp - accelerometerStartTime) * 24, Double.Parse(firstVal[1])));
+                                seriesData[2].Add(new DataPoint(1 + (firstTimeStamp - accelerometerStartTime) * 24, Double.Parse(firstVal[2])));
+                            }
+                            firstValFound = true;
+                        }
+
                         seriesData[0].Add(new DataPoint(1 + (timestamp - accelerometerStartTime) * 24, Double.Parse(vals[0])));
                         seriesData[1].Add(new DataPoint(1 + (timestamp - accelerometerStartTime) * 24, Double.Parse(vals[1])));
                         seriesData[2].Add(new DataPoint(1 + (timestamp - accelerometerStartTime) * 24, Double.Parse(vals[2])));
@@ -242,6 +261,8 @@ namespace TestApp
   
         public List<DataPoint>[] getGyroscopeData(double startTime, double duration, int offSet)
         {
+            Boolean firstValFound = false;
+
             startTime += gyroscopeStartTime;
             List<DataPoint>[] seriesData = new List<DataPoint>[3];
             seriesData[0] = new List<DataPoint>();
@@ -258,6 +279,19 @@ namespace TestApp
                 {
                     if (timestamp <= (startTime + duration))
                     {
+                        if (!firstValFound)
+                        {
+                            String[] firstVal = accelerometerData.ElementAt(i - 1).Split(',');
+                            double firstTimeStamp = ((Double.Parse(firstVal[3]) - gyroscopeFirstTime) / 1000000000);
+                            if (firstTimeStamp >= accelerometerStartTime && i > 0) //i > 0 likely not required. Simply a fault prevention measure
+                            {
+                                seriesData[0].Add(new DataPoint(1 + (firstTimeStamp - gyroscopeStartTime) * 24, Double.Parse(firstVal[0])));
+                                seriesData[1].Add(new DataPoint(1 + (firstTimeStamp - gyroscopeStartTime) * 24, Double.Parse(firstVal[1])));
+                                seriesData[2].Add(new DataPoint(1 + (firstTimeStamp - gyroscopeStartTime) * 24, Double.Parse(firstVal[2])));
+                            }
+                            firstValFound = true;
+                        }
+
                         seriesData[0].Add(new DataPoint(1 + (timestamp - gyroscopeStartTime) * 24, Double.Parse(vals[0])));
                         seriesData[1].Add(new DataPoint(1 + (timestamp - gyroscopeStartTime) * 24, Double.Parse(vals[1])));
                         seriesData[2].Add(new DataPoint(1 + (timestamp - gyroscopeStartTime) * 24, Double.Parse(vals[2])));
@@ -280,9 +314,8 @@ namespace TestApp
         double accelerometerFirstTime;
         double gyroscopeFirstTime;
 
-        private void setGyroscopeOrAccelerometerGraphData(string filePath, string graphType, TrackBar trackBar)
+        public void setGyroscopeOrAccelerometerGraphData(string filePath, string graphType, TrackBar trackBar)
         {
-        
             FunctionSeries xSeries = new FunctionSeries();
             FunctionSeries ySeries = new FunctionSeries();
             FunctionSeries zSeries = new FunctionSeries();
@@ -407,6 +440,8 @@ namespace TestApp
             pm.Series.Add(zSeries);
 
             file.Close();
+
+        
         }
 
         Boolean lastDirectionRight;
@@ -437,6 +472,7 @@ namespace TestApp
             audioBinaryReader.BaseStream.Seek(offset, SeekOrigin.Current);
             bytes = audioBinaryReader.ReadBytes(amount);
 
+            Console.WriteLine("Byte count: " + bytes.Length);
             double amplitude = 0;
             for (int i = 0; i < bytes.Length; i+=2)
             {
