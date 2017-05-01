@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace TestApp
+namespace DesktopAppHons
 {
     class TabValueStore
     {
@@ -27,6 +27,39 @@ namespace TestApp
 
         private List<String> accelerometerData;
         private List<String> gyroscopeData;
+        private int panCount = 0;
+        private int currentPosition = 0;
+        private int lastPosition = 0;
+
+        public void incrementPanCount()
+        {
+            panCount++;
+        }
+
+        public void setCurrentPosition(int currentPosition)
+        {
+            this.currentPosition = currentPosition;
+        }
+
+        public int getCurrentPosition()
+        {
+            return currentPosition;
+        }
+
+        public void setLastPosition(int lastPosition)
+        {
+            this.lastPosition = lastPosition;
+        }
+
+        public int getLastPosition()
+        {
+            return lastPosition;
+        }
+
+        public int getPanCount()
+        {
+            return panCount;
+        }
 
         public void setAccelerometerData(List<String> accelerometerData)
         {
@@ -88,9 +121,9 @@ namespace TestApp
             return elapsedTime;
         }
 
-        public void setAllPlaying()
+        public void setAllPlaying(Boolean allPlaying)
         {
-            allPlaying = !allPlaying;
+           this.allPlaying = allPlaying;
         }
 
         public Boolean getAllPlaying()

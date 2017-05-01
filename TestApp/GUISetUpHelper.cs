@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 
-namespace TestApp
+namespace DesktopAppHons
 {
+    //Class used for GUI-related activities. Also stores sensor data
     class GUISetUpHelper
     {
         long startTime = 0;
@@ -35,7 +36,7 @@ namespace TestApp
         public void setGPSPointProperties(PictureBox pictureBox)
         {
             pictureBox.Location = new Point(5, 385);
-            pictureBox.Size = new Size(450, 295);
+            pictureBox.Size = new Size(450, 290);
             pictureBox.BackColor = Color.Navy;
             pictureBox.BorderStyle = BorderStyle.None;
         }
@@ -43,9 +44,11 @@ namespace TestApp
         public void setMediaPlayerProperties(string videoPath, AxWMPLib.AxWindowsMediaPlayer mediaPlayer)
         {
             mediaPlayer.URL = videoPath;
-            mediaPlayer.Location = new Point(5, 175);
-            mediaPlayer.Size = new Size(510, 375);
+            mediaPlayer.Location = new Point(5, 213);
+            mediaPlayer.Size = new Size(507, 300);
             mediaPlayer.stretchToFit = false;
+            mediaPlayer.Ctlenabled = false;
+            mediaPlayer.uiMode = "none";
         }
 
         public void setStartButton(Button startAllButton)
@@ -124,29 +127,26 @@ namespace TestApp
             pv.Controller = new OxyPlot.PlotController();
             pv.Controller.UnbindKeyDown(OxyKey.Right);
             pv.Controller.UnbindKeyDown(OxyKey.Left);
+            pv.Controller.UnbindMouseDown(OxyMouseButton.Right);
+            pv.Controller.UnbindAll();
 
             pm.TextColor = OxyColor.FromRgb(0, 0, 0);
             pm.Padding = new OxyThickness(0, 10, 25, 15);
             pv.BackColor = Color.White;
 
-            //https://www.youtube.com/watch?v=VC-nlI_stx4
-            //^ Temp ref
             if (graphType.Equals("Accelerometer"))
             {
                 pv.Location = new Point(520, 50);
                 pv.Size = new Size(900, 205);
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" m/" + "s\u00B2 ");
-                //setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
             else if (graphType.Equals("Gyroscope"))
             {
                 pv.Location = new Point(520, 260);
                 pv.Size = new Size(900, 205);
-              
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" rad/s ");
-                //setGyroscopeOrAccelerometerGraphData(filePath, graphType, trackBar);
             }
             else if (graphType.Equals("AudioLevel"))
             {
@@ -155,7 +155,6 @@ namespace TestApp
           
                 xAxis = setXAxis(49);
                 yAxis = setYAxis(" Audio Level % ");
-                //setAudioLevelsGraphData(filePath, trackBar);
             }
 
 
@@ -199,13 +198,9 @@ namespace TestApp
         List<String> accelerometerData = new List<String>();
         List<String> gyroscopeData = new List<String>();
 
-        //Returns series for gryoscope or accelerometer data
+        //Gets accelerometer data within supplied period from accelerometer list
         public List<DataPoint>[] getAccelerometerData(double startTime, double duration, int offSet)
         {
-            Boolean directionRight = true;
-            // if (offSet < 0)
-            //     directionRight = false;
-
             Boolean firstValFound = false;
 
             startTime += accelerometerStartTime;
@@ -259,6 +254,7 @@ namespace TestApp
         }
 
   
+        //Gets gyroscope data within supplied period from gyroscope list
         public List<DataPoint>[] getGyroscopeData(double startTime, double duration, int offSet)
         {
             Boolean firstValFound = false;
@@ -281,7 +277,8 @@ namespace TestApp
                     {
                         if (!firstValFound)
                         {
-                            String[] firstVal = accelerometerData.ElementAt(i - 1).Split(',');
+                            String[] firstVal = gyroscopeData.ElementAt(i - 1).Split(',');
+                            
                             double firstTimeStamp = ((Double.Parse(firstVal[3]) - gyroscopeFirstTime) / 1000000000);
                             if (firstTimeStamp >= accelerometerStartTime && i > 0) //i > 0 likely not required. Simply a fault prevention measure
                             {
@@ -314,6 +311,7 @@ namespace TestApp
         double accelerometerFirstTime;
         double gyroscopeFirstTime;
 
+        //Sets graphs
         public void setGyroscopeOrAccelerometerGraphData(string filePath, string graphType, TrackBar trackBar)
         {
             FunctionSeries xSeries = new FunctionSeries();
@@ -347,7 +345,6 @@ namespace TestApp
             }
 
             double lastTime = 0;
-
             double x = Convert.ToDouble(parsedLine[0]);
             double y = Convert.ToDouble(parsedLine[1]);
             double z = Convert.ToDouble(parsedLine[2]);
@@ -365,6 +362,8 @@ namespace TestApp
             checkMinVal3Y(x, y, z, ref minValYAxis);
 
             double numberInCheck;
+
+            Boolean firstVal = false;
 
             while ((line = file.ReadLine()) != null)
             {
@@ -411,14 +410,24 @@ namespace TestApp
             else if (graphType.Equals("Gyroscope"))
             {
                 gyroscopeStartTime = ((lastTime - startValNegation) - audioLength * 1000000000) / 1000000000;
+
             }
 
             setValueRanges(trackBar, minValYAxis, maxValYAxis, audioLength);
             setLegend();
 
-            xSeries.Title = graphType + " X (RED)";
-            ySeries.Title = graphType + " Y (GREEN)";
-            zSeries.Title = graphType + " Z (BLUE)";
+            if (graphType.Equals("Accelerometer"))
+            {
+                xSeries.Title = "Accelerometer X: (RED)";
+                ySeries.Title = "Accelerometer Y: (GREEN)";
+                zSeries.Title = "Accelerometer Z: (BLUE)";
+            }
+            else
+            {
+                xSeries.Title = "Gyroscope X: (RED)";
+                ySeries.Title = "Gyroscope Y: (GREEN)";
+                zSeries.Title = "Gyroscope Z: (BLUE)";
+            }
 
             if(graphType.Equals("Accelerometer"))
             {
@@ -440,12 +449,11 @@ namespace TestApp
             pm.Series.Add(zSeries);
 
             file.Close();
-
-        
         }
 
         Boolean lastDirectionRight;
 
+        //Grabs new audio data from file
         public IList<DataPoint> getNewAudioData(int offset, int currFrame, Boolean directionRight)
         {
             IList<DataPoint> data = new List<DataPoint>();
@@ -472,7 +480,6 @@ namespace TestApp
             audioBinaryReader.BaseStream.Seek(offset, SeekOrigin.Current);
             bytes = audioBinaryReader.ReadBytes(amount);
 
-            Console.WriteLine("Byte count: " + bytes.Length);
             double amplitude = 0;
             for (int i = 0; i < bytes.Length; i+=2)
             {
@@ -483,7 +490,7 @@ namespace TestApp
                 else
                     amplitude = (amplitude / 32768) * 100;
 
-                xPoint = (precisionFactor * count) + 1;
+                xPoint = (precisionFactor * count) + 1 + (1/8000);
                 data.Add(new DataPoint(xPoint, amplitude));
                 count++;
             }
@@ -505,7 +512,6 @@ namespace TestApp
 
             yAxis.MajorStep = (int)Math.Ceiling(step);
             yAxis.Maximum = (int)Math.Ceiling(maxValYAxis);
-
             yAxis.Minimum = (int)Math.Floor(minValYAxis);
             
         }
